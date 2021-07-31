@@ -12,6 +12,8 @@ See LICENSE file at root of project for license
 
 #include <vector>
 
+#include <memory>
+
 #if COMPILE_WITH_IMGUI
 #include "imgui\ImGuizmo.h"
 #include "imgui\imgui_memory_editor.h"
@@ -1775,6 +1777,8 @@ int main(int argc, char* args[])
 
 		frameBuffShader.SetUniformTTexture("lightBuffTex", lightBuff.GetTexture());
 
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
 		RenderCamera(Camera, TWin_ScreenWidth, TWin_ScreenHeight, getScreenSize().w, getScreenSize().h, frameBuffShader);
 
 		TWin_EndFrame();

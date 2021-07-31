@@ -3,24 +3,11 @@
 #
 cmake_minimum_required (VERSION 3.6)
 
-project (BoxPushingGame)
+project (BoxPushingGame VERSION 1.0.0)
 
-#if (WINDOWS)
-    set(SDL2_PATH "${CMAKE_SOURCE_DIR}/extlibs/SDL2")
-    set(SDL2_mixer_PATH "${CMAKE_SOURCE_DIR}/extlibs/SDL2_mixer")
-    set(IS_64_BIT ${CMAKE_SIZEOF_VOID_P} MATCHES 8)
-    if (IS_64_BIT)
-        set(SDL2 "${SDL2_PATH}/lib/x64/SDL2.lib;${SDL2_PATH}/lib/x64/SDL2main.lib")
-        set(SDL2_mixer "${SDL2_mixer_PATH}/lib/x64/SDL2_mixer.lib")
-    else ()
-        set(SDL2 "${SDL2_PATH}/lib/x86/SDL2.lib;${SDL2_PATH}/lib/x86/SDL2main.lib")
-        set(SDL2_mixer "${SDL2_mixer_PATH}/lib/x86/SDL2_mixer.lib")
-    endif ()
-    set(SDL2_HEADERS "${SDL2_PATH}/include")
-    set(SDL2_mixer_HEADERS "${SDL2_mixer_PATH}/include")
-    include_directories(${SDL2_HEADERS})
-    include_directories(${SDL2_mixer_HEADERS})
-#endif()
+set(CMAKE_CXX_STANDARD 17)
+
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 set(BUILD_STATIC ON)
 set(BUILD_DEMOS OFF)
@@ -53,15 +40,22 @@ elseif(ANDROID)
         android
     )
 else()
-    #find_package(OpenGL REQUIRED)
-    set(PLATFORM_SPECIFIC_INCLUDES
-        opengl32
-    )
+    find_package(OpenGL REQUIRED)
+    find_package(SDL2 REQUIRED)
+    find_package(SDL2_mixer REQUIRED)
+
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+    include_directories(${GTK3_INCLUDE_DIRS})
+
+    include_directories(${SDL2_INCLUDE_DIRS})
+    include_directories(${SDL_mixer_INCLUDE_DIRS})
+    if (WIN32)
+        set(PLATFORM_SPECIFIC_INCLUDES
+            opengl32
+        )
+    endif()
 endif()
-
-set(CMAKE_CXX_STANDARD 17)
-
-find_library(SDL2 SDL2)
 
 file(GLOB GAME_SOURCES "src/*")
 
@@ -89,9 +83,29 @@ target_link_libraries(${TARGET_NAME}
 	flecs::flecs_static
 	lua_static
 	chipmunk
-	${SDL2}
+    SDL2::Main
+    SDL2::Mixer
+    dl
+    ${GTK3_LIBRARIES}
+	${SDL2_LIBRARIES}
     ${SDL2_mixer}
 	${PLATFORM_SPECIFIC_INCLUDES}
 )
 
 # TODO: Add tests and install targets if needed.
+
+
+# Tell CPack to generate a .deb package
+set(CPACK_GENERATOR "DEB")
+
+# Set a Package Maintainer.
+# This is required
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jacob Allen")
+
+# Set a Package Version
+set(CPACK_PACKAGE_VERSION ${CMAKE_PROJECT_VERSION})
+
+set(CPACK_DEBIAN_PACKAGE_DEPENDS chipmunk SDL2 SDL2_mixer)
+
+# Include CPack
+include(CPack)

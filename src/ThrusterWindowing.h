@@ -7,27 +7,11 @@ See LICENSE file at root of project for license
 
 #include "ThrusterConfig.h"
 
-#ifdef __LINUX__
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_ttf.h>
-#endif
-
-#ifdef _WIN32
-#include <SDL.h>
-#include <SDL_mixer.h>
-#endif
 
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
-#include "glad\glad.h"
-#endif
-
-#ifdef __PSP__
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_mixer.h>
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_ttf.h>
+#include "glad/glad.h"
 #endif
 
 #define TWin_Exit -1

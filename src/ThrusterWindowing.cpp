@@ -14,7 +14,6 @@ ThrusterWindowing.cpp - This is where the windowing system is handled. Can be us
 #include "ThrusterConfig.h"
 #include <iostream>
 
-#define TMessageBox_WIN
 #include "TMessageBox.hpp"
 
 #ifdef __PSP__

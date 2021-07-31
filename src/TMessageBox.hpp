@@ -4,6 +4,13 @@
 #ifndef TMESSAGEBOX_H
 #define TMESSAGEBOX_H
 
+#ifdef _WIN32
+#define TMessageBox_WIN
+#endif
+#ifdef __linux__
+#define TMessageBox_LIN
+#endif
+
 namespace ThrusterNativeDialogs {
 
     /*!
@@ -200,7 +207,7 @@ namespace ThrusterNativeDialogs {
 
     } // namespace
 
-    Selection showMessageBox(const char* message, const char* title, Style style, Buttons buttons) {
+    inline Selection showMessageBox(const char* message, const char* title, Style style, Buttons buttons) {
         if (!gtk_init_check(0, nullptr)) {
             return Selection::Error;
         }

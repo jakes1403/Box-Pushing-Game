@@ -26,6 +26,8 @@ See LICENSE file at root of project for license
 #include <time.h>
 #include <functional>
 
+#include <memory>
+
 #include "TFile.h"
 
 #include "TMessageBox.hpp"
@@ -1859,7 +1861,7 @@ namespace Thruster
 		}
 		void StartRender(float canvasWidth, float canvasHeight)
 		{
-			lightCam.bgColor = vec4(color.rgb, 1.0f);
+			lightCam.bgColor = vec4(color.r, color.g, color.b, 1.0f);
 			lightCam.transform = CurrentCameraTransform.transform;
 			lightCam.Start(canvasWidth, canvasHeight, getScreenSize().w, getScreenSize().h);
 			lightCam.StartFrameAsRenderer();

@@ -61,7 +61,3 @@ if(NOT MSVC)
 endif()
 
 add_subdirectory(src)
-
-if(BUILD_DEMOS)
-  add_subdirectory(demo)
-endif()
