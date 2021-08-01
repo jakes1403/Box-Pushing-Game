@@ -137,7 +137,7 @@ namespace ThrusterNativeDialogs {
 
     } // namespace
 
-    Selection showMessageBox(const char* message, const char* title, Style style, Buttons buttons) {
+    inline Selection showMessageBox(const char* message, const char* title, Style style, Buttons buttons) {
         UINT flags = MB_TASKMODAL;
 
         flags |= getIcon(style);

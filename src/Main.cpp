@@ -659,7 +659,7 @@ public:
 			// Temp fix for weird issue when building with CMake
 			boxList[i].Update(boxShader);
 			vec4 tint = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-			switch (boxList[i - 1].color)
+			switch (boxList[i].color)
 			{
 			case Red:
 				tint = vec4(0.72156862745f, 0.0f, 0.0f, 1.0f);
@@ -675,8 +675,8 @@ public:
 				break;
 			}
 			boxShader.SetUniformVec4("tint", tint);
+			boxSprite.transform = boxList[i].boxObject.transform;
 			boxSprite.draw(boxShader);
-			boxSprite.transform = boxList[i].boxObject.sprite.transform;
 		}
 	}
 	void removeAll()

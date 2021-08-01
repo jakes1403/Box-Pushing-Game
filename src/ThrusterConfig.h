@@ -23,12 +23,4 @@ See LICENSE file at root of project for license
 
 #define KEYBINDS_FULLSCREEN SDLK_F11
 
-#if !(defined(__PSP__))
-#define COMPILE_WITH_IMGUI false
-#else
-#define COMPILE_WITH_IMGUI false
-#endif
-
 #define TFLOAT_DATATYPE float
-
-#define DEFAULT_FONTSIZE 12
