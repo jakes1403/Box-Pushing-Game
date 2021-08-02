@@ -14,6 +14,10 @@ See LICENSE file at root of project for license
 
 #include <memory>
 
+#ifdef EMSCRIPTEN
+#include <emscripten.h>
+#endif
+
 #if COMPILE_WITH_IMGUI
 #include "imgui\ImGuizmo.h"
 #include "imgui\imgui_memory_editor.h"
@@ -97,7 +101,8 @@ public:
 	void Load()
 	{	
 		guyTex.loadImage("char.png");
-
+		stepSoundLeftFoot.load("step.wav");
+		stepSoundRightFoot.load("step2.wav");
 		//guyObject.physShape
 	}
 	void Create()
@@ -105,7 +110,7 @@ public:
 		TSprite guySprite;
 		guySprite.create(guyTex, { 0, 0 });
 		guySprite.isAnimated = true;
-		guySprite.animatedFrameSize = { 0.0f, 0.0f, 203, 205 };
+		guySprite.animatedFrameSize = { 0.0f, 0.0f, (float)guyTex.width / 12.0f, (float)guyTex.height };
 		guySprite.setFrame(0);
 		guySprite.worldSize.w = 50;
 		guySprite.worldSize.h = 51;
@@ -128,6 +133,17 @@ public:
 		if (isRunning)
 		{
 			setFrame((int)(((SDL_GetTicks() / 16.6666f) / 5)) % 3);
+			
+			if (stepTimerLeftFoot.IsExpired())
+			{
+				//stepSoundLeftFoot.play();
+				stepTimerLeftFoot.Start(200);
+			}
+			if (stepTimerRightFoot.IsExpired())
+			{
+				//stepSoundRightFoot.play();
+				stepTimerRightFoot.Start(400);
+			}
 		}
 		else
 		{
@@ -139,6 +155,35 @@ public:
 		if (fabs(joyAxis.x) > joyStickCutoff || fabs(joyAxis.y) > joyStickCutoff)
 		{
 			moveInDirection({ joyAxis.x * moveSpeed, joyAxis.y * moveSpeed });
+		}
+		else if (inputQuery.pointerDown)
+		{
+			vec2 mouse = ConvertNativeToWorldCords(vec2(inputQuery.pointerX, inputQuery.pointerY));
+			vec2 distance = vec2(mouse.x - guyObject.transform.x, mouse.y - guyObject.transform.y);
+			if (fabs(glm::distance(vec2(0.0f), distance)) > 20.0f)
+			{
+				vec2 directionMove = normalize(distance);
+				moveInDirection(directionMove * moveSpeed);
+			}
+		}
+		else
+		{
+			if (inputQuery.buttons[BUTTON_UP])
+			{
+				moveUp();
+			}
+			if (inputQuery.buttons[BUTTON_DOWN])
+			{
+				moveDown();
+			}
+			if (inputQuery.buttons[BUTTON_RIGHT])
+			{
+				moveRight();
+			}
+			if (inputQuery.buttons[BUTTON_LEFT])
+			{
+				moveLeft();
+			}
 		}
 
 		guyObject.update();
@@ -159,7 +204,7 @@ public:
 	{
 		moveInDirection({ 0, moveSpeed * -1 });
 	}
-	void moveInDirection(TVec2D moveDirection)
+	void moveInDirection(vec2 moveDirection)
 	{
 		tfloat minMoveSpeed = moveSpeed / 2;
 		isRunning = true;
@@ -197,7 +242,7 @@ public:
 			}
 		}
 		updateLookingDirection();
-		cpBodyApplyForceAtLocalPoint(guyObject.physBody, moveDirection.toCpVect(), cpv(0,0));
+		cpBodyApplyForceAtLocalPoint(guyObject.physBody, cpv(moveDirection.x, moveDirection.y), cpv(0,0));
 	}
 	int direction = facingRIGHT;
 	
@@ -240,9 +285,13 @@ public:
 	{
 		guyObject.setPosition(place);
 	}
-	TVec2D lookingDirection = { 0, 0 };
+	vec2 lookingDirection = { 0, 0 };
 	bool isRunning;
 private:
+	TSound stepSoundLeftFoot;
+	TSound stepSoundRightFoot;
+	TTimer stepTimerLeftFoot;
+	TTimer stepTimerRightFoot;
 	TVertexList characterHitBoxList = { {-19.524090, -17.250737}, {-15.244838, -25.541790}, {-4.546706, -25.274336}, {1.069813, -19.390364}, {6.151426, -25.006883}, {16.314651, -24.739430}, {20.593904, -22.064897}, {19.791544, -17.250737}, {14.977384, -11.901672}, {12.837758, -7.889872}, {19.256637, -4.680433}, {23.268437, 2.273353}, {23.000983, 14.308751}, {13.640118, 22.599803}, {0.000000, 25.006883}, {-14.442478, 23.134710}, {-22.466077, 15.646018}, {-24.605703, 4.947886}, {-21.396264, -4.145526}, {-15.512291, -8.157325}, {-11.233038, -9.227139}, {-14.709931, -12.169125} };
 	TObject guyObject;
 	int currentFrame = 1;
@@ -281,7 +330,51 @@ void xAt(TVec2D pos)
 #define Green 1
 #define Red 2
 #define White 3
-#define NumColors 4
+
+#define Purple 4
+#define Blue 5
+#define Yellow 6
+
+#define LightRed 7
+#define DarkRed 8
+
+#define LightGreen 9
+#define DarkGreen 10
+
+#define DarkOrange 11
+
+#define NumColors 12
+
+vec3 ColorToTint(int color)
+{
+	switch (color)
+	{
+	case Red:
+		return vec3(0.72156862745f, 0.0f, 0.0f);
+	case Orange:
+		return vec3(1.0f, 0.41568627451f, 0.0f);
+	case Green:
+		return vec3(0.0f, 0.50196078431f, 0.0f);
+	case White:
+		return vec3(1.0f, 1.0f, 1.0f);
+	case Purple:
+		return vec3(0.8245, 0.085, 0.85);
+	case Blue:
+		return vec3(0.0696, 0.283, 0.87);
+	case Yellow:
+		return vec3(1, 0.9833, 0);
+	case LightRed:
+		return vec3(1, 0.2, 0.2);
+	case DarkRed:
+		return vec3(0.71, 0, 0);
+	case LightGreen:
+		return vec3(0.4417, 1, 0.33);
+	case DarkGreen:
+		return vec3(0.075, 0.45, 0);
+	case DarkOrange:
+		return vec3(0.95, 0.6333, 0);
+	}
+}
 
 //class Level1 {
 //public:
@@ -509,7 +602,7 @@ public:
 		if (isInBounds(myPlace, { -203.040604, 306.080261, 14.402946, 204.709747 })) // Trash bounds
 		{
 			TVec2D indicatorPos = { -91, 134 };
-			if (color == White)
+			if (color == White || color == Purple || color == Blue || color == Yellow)
 			{
 				correctBox(color, indicatorPos);
 				boxObject.destroy();
@@ -523,7 +616,7 @@ public:
 		if (isInBounds(myPlace, { 230.405823, 285.732788, 375.098053, 202.554810 })) // Red bounds
 		{
 			TVec2D indicatorPos = { 306, 146 };
-			if (color == Red)
+			if (color == Red || color == LightRed || color == DarkRed)
 			{
 				correctBox(color, indicatorPos);
 				boxObject.destroy();
@@ -537,7 +630,7 @@ public:
 		if (isInBounds(myPlace, { 538.192078, 60.276749, 634.742737, -109.823547 })) // Green bounds
 		{
 			TVec2D indicatorPos = { 473, -31 };
-			if (color == Green)
+			if (color == Green || color == LightGreen || color == DarkGreen)
 			{
 				correctBox(color, indicatorPos);
 				boxObject.destroy();
@@ -551,7 +644,7 @@ public:
 		if (isInBounds(myPlace, { -492.676544, 288.165283, -335.414001, 204.184937})) // Orange bounds
 		{
 			TVec2D indicatorPos = {-404, 129};
-			if (color == Orange)
+			if (color == Orange || color == DarkOrange)
 			{
 				correctBox(color, indicatorPos);
 				boxObject.destroy();
@@ -562,22 +655,8 @@ public:
 				boxObject.destroy();
 			}
 		}
-		vec4 tint = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-		switch (color)
-		{
-		case Red:
-			tint = vec4(0.72156862745f, 0.0f, 0.0f, 1.0f);
-			break;
-		case Orange:
-			tint = vec4(1.0f, 0.41568627451f, 0.0f, 1.0f);
-			break;
-		case Green:
-			tint = vec4(0.0f, 0.50196078431f, 0.0f, 1.0f);
-			break;
-		case White:
-			tint = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-			break;
-		}
+		vec3 tintColor = ColorToTint(color);
+		vec4 tint = vec4(tintColor, 1.0f);
 		shader.SetUniformVec4("tint", tint);
 
 		boxObject.update(shader);
@@ -592,48 +671,29 @@ private:
 	TVec2D direction = { 0, 1000 };
 };
 
+vector<TTexture> boxTextures;
+TTexture LoadBox(int color)
+{
+	TTexture boxTex;
 
-//TTexture LoadBox(int color)
-//{
-//	TTexture boxTex;
-//
-//	boxTex.loadImage("box.png");
-//
-//	switch (color)
-//	{
-//	case Red:
-//		tint(boxTex, 184, 0, 0);
-//		break;
-//	case Orange:
-//		tint(boxTex, 255, 106, 0);
-//		break;
-//	case Green:
-//		tint(boxTex, 0, 128, 0);
-//		break;
-//	}
-//	
-//	return boxTex;
-//}
+	boxTex.loadImage("box.png");
 
-//void generateTexList()
-//{
-//	boxTexture.loadImage("box.png");
-//#if GRAPHICS_IMPLEMENTATION == G_IMPL_SDL2
-//	for (int i = 0; i < NumColors; i++)
-//	{
-//		boxTextures.push_back(LoadBox(i));
-//	}
-//#endif
-//}
+	vec3 t = ColorToTint(color);
+
+	tint(boxTex, t.r * 255, t.g * 255, t.b * 255);
+	
+	return boxTex;
+}
 
 class Boxes {
 public:
 	void load()
 	{
 		boxShader = grabMainShader();
-
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 		boxShader.AttachShader("boxFrag.frag", GL_FRAGMENT_SHADER);
 		boxShader.AttachShader("defaultVert.vert", GL_VERTEX_SHADER);
+#endif
 
 		boxShader.Create();
 
@@ -643,6 +703,13 @@ public:
 
 		boxSprite.worldSize.w = 56;
 		boxSprite.worldSize.h = 49;
+
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_SDL2
+		for (int i = 0; i < NumColors; i++)
+		{
+			boxTextures.push_back(LoadBox(i));
+		}
+#endif
 
 	}
 	void addBox()
@@ -658,24 +725,13 @@ public:
 		{
 			// Temp fix for weird issue when building with CMake
 			boxList[i].Update(boxShader);
-			vec4 tint = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-			switch (boxList[i].color)
-			{
-			case Red:
-				tint = vec4(0.72156862745f, 0.0f, 0.0f, 1.0f);
-				break;
-			case Orange:
-				tint = vec4(1.0f, 0.41568627451f, 0.0f, 1.0f);
-				break;
-			case Green:
-				tint = vec4(0.0f, 0.50196078431f, 0.0f, 1.0f);
-				break;
-			case White:
-				tint = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-				break;
-			}
+			vec3 tintColor = ColorToTint(boxList[i].color);
+			vec4 tint = vec4(tintColor, 1.0f);
 			boxShader.SetUniformVec4("tint", tint);
 			boxSprite.transform = boxList[i].boxObject.transform;
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_SDL2
+			boxSprite.spriteTex = boxTextures[boxList[i].color];
+#endif
 			boxSprite.draw(boxShader);
 		}
 	}
@@ -706,7 +762,7 @@ void LoadNumbers()
 
 	numSprite.create(numTex, { 0, 0 });
 	numSprite.isAnimated = true;
-	numSprite.animatedFrameSize = { 0, 0, 1024, 1024 };
+	numSprite.animatedFrameSize = { 0, 0, (float)numTex.height, (float)numTex.height };
 	numSprite.setFrame(0);
 
 	numSprite.attachedToCamera = true;
@@ -903,7 +959,7 @@ public:
 		{
 			loseSprite.draw();
 		}
-		if (inputQuery.buttons[BUTTON_1])
+		if (inputQuery.buttons[BUTTON_1] || inputQuery.pointerDown)
 		{
 			SceneStateManager.SetStateTimed(200, this, &LevelScene::endWinLoseDisplay);
 		}
@@ -1061,23 +1117,6 @@ public:
 		showScore = true;
 		TVec2D guyPos = guy.getTransform();
 
-		if (inputQuery.buttons[BUTTON_UP])
-		{
-			guy.moveUp();
-		}
-		if (inputQuery.buttons[BUTTON_DOWN])
-		{
-			guy.moveDown();
-		}
-		if (inputQuery.buttons[BUTTON_RIGHT])
-		{
-			guy.moveRight();
-		}
-		if (inputQuery.buttons[BUTTON_LEFT])
-		{
-			guy.moveLeft();
-		}
-
 		guy.Update();
 
 		allBoxes.draw();
@@ -1212,7 +1251,7 @@ public:
 
 		Camera.transform.x = sin(SDL_GetTicks() / 2000.0f) * 250;
 
-		if (inputQuery.buttons[BUTTON_1])
+		if (inputQuery.buttons[BUTTON_1] || inputQuery.pointerDown)
 		{
 			isTrans = false;
 			transToLevel(1);
@@ -1221,6 +1260,8 @@ public:
 	}
 	void Start() override
 	{
+		windLoop.load("wind.wav");
+		//windLoop.playLooped();
 		//themeMusic.playLooped();
 		bool useLighting = true;
 		frameBuffShader.SetUniformBool("useLighting", useLighting);
@@ -1271,6 +1312,8 @@ public:
 
 		lightBuff.EndRender();
 	}
+
+	TSound windLoop;
 };
 
 shared_ptr<LevelScene> levelScene;
@@ -1375,6 +1418,8 @@ public:
 		bootSound.load("thrusterbootup.wav");
 		TTexture thrusterLogoTex;
 		thrusterLogoTex.loadImage("thrusterlogo.png");
+		TTexture splashBGTex;
+		splashBGTex.loadImage("splashbg.png");
 
 		thrusterSprite.create(thrusterLogoTex, { 0, 0 });
 
@@ -1386,15 +1431,16 @@ public:
 		wait.Start(4000);
 #endif
 
-		splashSprite.create(thrusterLogoTex, { 0, 0 });
+		splashSprite.create(splashBGTex, { 0, 0 });
 		splashSprite.worldSize = { 0, 0, 480, 272 };
 
 		Camera.bgColor = vec4(1.0f, 1.0f, 1.0f, 1.0);
 
 		splashShader = grabMainShader();
-
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 		splashShader.AttachShader("splashFrag.frag", GL_FRAGMENT_SHADER);
 		splashShader.AttachShader("defaultVert.vert", GL_VERTEX_SHADER);
+#endif
 		
 		splashShader.Create();
 
@@ -1403,6 +1449,11 @@ public:
 
 	void Update() override
 	{
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_SDL2
+	 	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+	 	SDL_RenderClear(renderer);
+		splashSprite.transform.y = cos(((float)SDL_GetTicks() / 1000.0f)) * 10;
+#endif
 		splashSprite.draw(splashShader);
 		thrusterSprite.draw();
 
@@ -1448,6 +1499,9 @@ inline double hires_time()
 	return (double)SDL_GetPerformanceCounter() / 10000000.0f;
 }
 
+std::function<void()> loop;
+void main_loop() { loop(); }
+
 int main(int argc, char* args[])
 {
 
@@ -1458,47 +1512,9 @@ int main(int argc, char* args[])
 
 	//PathToTPak("assets/").WriteFull("assets.tpak");
 
-	/*TPak pack;
-	pack.AddFile(LoadTFileFromLocalPath("assets/2DFrag.frag"), "2DFrag.frag");
-	pack.AddFile(LoadTFileFromLocalPath("assets/FragmentShader.frag"), "FragmentShader.frag");
-	pack.AddFile(LoadTFileFromLocalPath("assets/VertexShader.vert"), "VertexShader.vert");
-	pack.AddFile(LoadTFileFromLocalPath("assets/level1.lua"), "level1.lua");
-	pack.AddFile(LoadTFileFromLocalPath("assets/level2.lua"), "level2.lua");
-	pack.AddFile(LoadTFileFromLocalPath("assets/level3.lua"), "level3.lua");
-	pack.AddFile(LoadTFileFromLocalPath("assets/level4.lua"), "level4.lua");
-	pack.AddFile(LoadTFileFromLocalPath("assets/level5.lua"), "level5.lua");
+	//TAssetManager.SetLoadLocationToTPak("assets.tpak");
 
-	pack.AddFile(LoadTFileFromLocalPath("assets/beginlevel.png"), "beginlevel.png");
-	pack.AddFile(LoadTFileFromLocalPath("assets/box.png"), "box.png");
-	pack.AddFile(LoadTFileFromLocalPath("assets/char.png"), "char.png");
-	pack.AddFile(LoadTFileFromLocalPath("assets/check.png"), "check.png");
-	pack.AddFile(LoadTFileFromLocalPath("assets/level.png"), "level.png");
-	pack.AddFile(LoadTFileFromLocalPath("assets/logo.png"), "logo.png");
-	pack.AddFile(LoadTFileFromLocalPath("assets/machine.png"), "machine.png");
-	pack.AddFile(LoadTFileFromLocalPath("assets/numberset.png"), "numberset.png");
-	pack.AddFile(LoadTFileFromLocalPath("assets/pressStartSpace.png"), "pressStartSpace.png");
-
-	pack.AddFile(LoadTFileFromLocalPath("assets/ready.png"), "ready.png");
-	pack.AddFile(LoadTFileFromLocalPath("assets/score.png"), "score.png");
-	pack.AddFile(LoadTFileFromLocalPath("assets/time.png"), "time.png");
-	pack.AddFile(LoadTFileFromLocalPath("assets/x.png"), "x.png");
-	pack.AddFile(LoadTFileFromLocalPath("assets/youbeat.png"), "youbeat.png");
-	pack.AddFile(LoadTFileFromLocalPath("assets/youlose.png"), "youlose.png");
-
-	pack.AddFile(LoadTFileFromLocalPath("assets/tickdown.wav"), "tickdown.wav");
-	pack.AddFile(LoadTFileFromLocalPath("assets/tickdownlow.wav"), "tickdownlow.wav");
-
-	pack.WriteFull("assets.tpak");
-	
-	pack.Free();*/
-
-	/*pack.UseFile("assets.tpak");
-
-	pack.ReadFull();*/
-
-	//PathToTPak("assets/").WriteFull("assets.tpak");
-
-	TAssetManager.SetLoadLocationToTPak("assets.tpak");
+	TAssetManager.SetLoadLocationToPath("assets/");
 
 	Thruster_Init(GameName, ScreenWidth, ScreenHeight);
 
@@ -1554,8 +1570,10 @@ int main(int argc, char* args[])
 	MainShader.SetUniformTTexture("noiseTex", noiseTex);
 
 	frameBuffShader = grabMainShader();
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 	frameBuffShader.AttachShader("frameBuffShader.frag", GL_FRAGMENT_SHADER);
 	frameBuffShader.AttachShader("defaultVert.vert", GL_VERTEX_SHADER);
+#endif
 
 	TTexture slateTex;
 	slateTex.loadImage("SlateTexture.png");
@@ -1678,10 +1696,6 @@ int main(int argc, char* args[])
 	redLight1.Create({ 47, 40 }, lightCookie);
 	redLight1.sprite.worldSize = { 0, 0, 128, 128 };
 	redLight1.color = vec4(0.698, 0.133, 0.133, 1.0f);
-
-	//TSprite test;
-	//test.create(loseTex, { 0, 0 });
-
 	
 	greenLight1.Create({ 49, 25 }, lightCookie);
 	greenLight1.sprite.worldSize = { 0, 0, 128, 128 };
@@ -1731,8 +1745,6 @@ int main(int argc, char* args[])
 	uiLight3.brightness = 1.0;
 
 	Camera.Create();
-	//TCamera camtest;
-	//camtest.Create();
 
 	boxSound.load("bump.wav");
 	tickDownLow.load("tickdownlow.wav");
@@ -1744,11 +1756,17 @@ int main(int argc, char* args[])
 
 	vec2 mouseGuiPos = vec2(0.0f);
 
-	while (true)
-	{
+	int w, h;
+	bool a;
 
+	SDL_GetWindowSize(TWin_Window, &w, &h);
+	GameWindowInfo.transform.w = (tfloat)w;
+	GameWindowInfo.transform.h = (tfloat)h;
+
+	loop = [&]
+	{
 		runningStatus = TWin_BeginFrame(gameCurrentFrame++);
-		if (runningStatus == TWin_Exit) break;
+		if (runningStatus == TWin_Exit) return;
 
 		Thruster_Update();
 
@@ -1763,26 +1781,33 @@ int main(int argc, char* args[])
 #endif
 
 		Camera.Start(TWin_ScreenWidth, TWin_ScreenHeight, getScreenSize().w, getScreenSize().h);
+#ifndef PLATFORM_NO_FRAMEBUFFER
 		Camera.StartFrameAsRenderer();
-
-		mousePos = ConvertNativeToWorldCords({ mouseGuiPos.x, mouseGuiPos.y });
+#endif
 
 		GameSceneManager.UpdateScenes();
-
+#ifndef PLATFORM_NO_FRAMEBUFFER
 		Camera.EndFrameAsRenderer();
+#endif
 		Camera.End();
 
-
+#ifndef PLATFORM_NO_FRAMEBUFFER
 		frameBuffShader.Use();
 
 		frameBuffShader.SetUniformTTexture("lightBuffTex", lightBuff.GetTexture());
-
+		
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 		RenderCamera(Camera, TWin_ScreenWidth, TWin_ScreenHeight, getScreenSize().w, getScreenSize().h, frameBuffShader);
+#endif
 
 		TWin_EndFrame();
-	}
+	};
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop(main_loop, 0, true);
+#else
+    while(true) main_loop();
+#endif
 
 	TWin_DestroyWindow();
 

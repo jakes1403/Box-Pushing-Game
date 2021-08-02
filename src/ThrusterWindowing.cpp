@@ -14,7 +14,9 @@ ThrusterWindowing.cpp - This is where the windowing system is handled. Can be us
 #include "ThrusterConfig.h"
 #include <iostream>
 
+#ifndef EMSCRIPTEN
 #include "TMessageBox.hpp"
+#endif
 
 #ifdef __PSP__
 #include <pspdisplay.h>
@@ -86,19 +88,25 @@ int TWin_Init(int ScreenFPS, int ScreenWidth, int ScreenHeight, bool EnableAudio
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 	{
+#ifndef EMSCRIPTEN
 		ThrusterNativeDialogs::showMessageBox("SDL video could not be initialized!", "Initialization Error", ThrusterNativeDialogs::Style::Error);
+#endif
 		return TWin_Fail;
 	}
 	if (EnableAudio)
 	{
 		if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
 		{
+#ifndef EMSCRIPTEN
 			ThrusterNativeDialogs::showMessageBox("SDL audio could not be initialized!", "Initialization Error", ThrusterNativeDialogs::Style::Error);
+#endif
 			return TWin_Fail;
 		}
 		if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0)
 		{
+#ifndef EMSCRIPTEN
 			ThrusterNativeDialogs::showMessageBox("SDL mixer could not be initialized!", "Initialization Error", ThrusterNativeDialogs::Style::Error);
+#endif
 			return TWin_Fail;
 		}
 	}
@@ -106,7 +114,9 @@ int TWin_Init(int ScreenFPS, int ScreenWidth, int ScreenHeight, bool EnableAudio
 	{
 		if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) < 0)
 		{
+#ifndef EMSCRIPTEN
 			ThrusterNativeDialogs::showMessageBox("SDL joystick could not be initialized!", "Initialization Error", ThrusterNativeDialogs::Style::Error);
+#endif
 			return TWin_Fail;
 		}
 		if (SDL_NumJoysticks() < 1)
@@ -147,28 +157,32 @@ int TWin_Init(int ScreenFPS, int ScreenWidth, int ScreenHeight, bool EnableAudio
 // TODO: Fix error handling with new libs
 int TWin_CreateWindow(const char* WindowName)
 {
+#ifndef EMSCRIPTEN
 	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+#endif
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 	TWin_Window = SDL_CreateWindow(WindowName, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, TWin_ScreenWidth, TWin_ScreenHeight, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL);
 #else
-	TWin_Window = SDL_CreateWindow(WindowName, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, TWin_ScreenWidth, TWin_ScreenHeight, SDL_WINDOW_SHOWN);
+	TWin_Window = SDL_CreateWindow(WindowName, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, TWin_ScreenWidth, TWin_ScreenHeight, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 #endif
 	if (TWin_Window == NULL)
 	{
+#ifndef EMSCRIPTEN
 		ThrusterNativeDialogs::showMessageBox("SDL window could not be created!", "Initialization Error", ThrusterNativeDialogs::Style::Error);
+#endif
 		return TWin_Fail;
 	}
 
-	#if not defined __PSP__
+#ifndef EMSCRIPTEN
 	// Fix later
 	SDL_SetWindowResizable(TWin_Window, SDL_TRUE);
 	SDL_SetWindowMinimumSize(TWin_Window, TWin_ScreenWidth / 4, TWin_ScreenHeight / 4);
-	#endif
+#endif
 
 	#ifdef __PSP__
 	renderer = SDL_CreateRenderer(TWin_Window, -1, SDL_RENDERER_ACCELERATED);
@@ -259,7 +273,6 @@ int TWin_BeginFrame(int frame)
 		{
 			return TWin_Exit;
 		}
-		#if defined(__LINUX__) || defined(_WIN32)
 		else if (e.type == SDL_KEYDOWN)
 		{
 			switch (e.key.keysym.sym)
@@ -350,7 +363,6 @@ int TWin_BeginFrame(int frame)
 		{
 
 		}
-		#endif
 
 		int mouseX, mouseY;
 		const int buttons = SDL_GetMouseState(&mouseX, &mouseY);
@@ -513,6 +525,7 @@ int TWin_DestroyWindow()
 
 int TWin_ToggleWindowed()
 {
+#ifndef EMSCRIPTEN
 	//Grab the mouse so that we don't end up with unexpected movement when the dimensions/position of the window changes.
 	TWin_IsFullScreenEnabled = !TWin_IsFullScreenEnabled;
 	if (!TWin_IsFullScreenEnabled)
@@ -525,6 +538,7 @@ int TWin_ToggleWindowed()
 		//SDL_SetRelativeMouseMode(SDL_TRUE);
 		SDL_SetWindowFullscreen(TWin_Window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 	}
+#endif
 	return 0;
 }
 
@@ -536,6 +550,8 @@ InputQuery GetInput()
 	
 	internalInputQuery.axis[Axis1X] = float(x_move / 32767.0f);
 	internalInputQuery.axis[Axis1Y] = float((y_move / 32767.0f) * -1);
+
+	SDL_GetMouseState(&internalInputQuery.pointerX, &internalInputQuery.pointerY);
 
 	return internalInputQuery;
 }

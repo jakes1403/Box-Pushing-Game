@@ -1,7 +1,9 @@
 #pragma once
 
 #include <fstream>
+
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_mixer.h>
 
 namespace Thruster
 {

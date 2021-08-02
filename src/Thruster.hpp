@@ -30,12 +30,12 @@ See LICENSE file at root of project for license
 
 #include "TFile.h"
 
+#ifndef EMSCRIPTEN
 #include "TMessageBox.hpp"
+#endif
 
-#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-#endif
 
 #if COMPILE_WITH_IMGUI
 #include "../src/imgui/imgui.h"
@@ -414,13 +414,19 @@ namespace Thruster
 		void loadImage(string path)
 		{
 			TFile& requestedFile = TAssetManager.RequestAsset(path);
+			bool flip;
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_SDL2
-			SDL_Surface* loaded = IMG_Load_RW(TFileToSDL_RW(requestedFile), 1);
+			flip = false;
+#else
+			flip = true;
+#endif
+			stbi_set_flip_vertically_on_load(flip);
+			unsigned char* raw = stbi_load_from_memory((stbi_uc*)requestedFile.Data, requestedFile.Size, &width, &height, &numChannels, 4);
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_SDL2
+			SDL_Surface* loaded = SDL_CreateRGBSurfaceWithFormatFrom((void*)raw, width, height, 32, 4*width, SDL_PIXELFORMAT_RGBA32);
 			loadRaw(loaded);
 #endif
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
-			stbi_set_flip_vertically_on_load(true);
-			unsigned char* raw = stbi_load_from_memory((stbi_uc*)requestedFile.Data, requestedFile.Size, &width, &height, &numChannels, 0);
 			glGenTextures(1, &texture);
 
 			glActiveTexture(GL_TEXTURE0);
@@ -502,17 +508,18 @@ namespace Thruster
 #endif
 	};
 
-#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
-
 	class TShader {
 	public:
-		void AttachShader(string path, GLenum type)
+		void AttachShader(string path, uint32_t type)
 		{
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 			unsigned int currentShader = LoadShader(path, type);
 			shaders.push_back(currentShader);
+#endif
 		}
 		void Create()
 		{
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 			ShaderProgram = glCreateProgram();
 
 			for (auto currentShader : shaders)
@@ -535,13 +542,17 @@ namespace Thruster
 				glGetProgramInfoLog(ShaderProgram, 512, NULL, info);
 				ThrusterNativeDialogs::showMessageBox(info, "Shader Linking Error", ThrusterNativeDialogs::Style::Warning);
 			}
+#endif
 		}
-		void Use()
+		inline void Use()
 		{
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 			glUseProgram(ShaderProgram);
+#endif
 		}
 		void ReadyTextures()
 		{
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 			Use();
 			for (int i = 0; i <= knownTextures.size(); i++)
 			{
@@ -549,46 +560,60 @@ namespace Thruster
 				glBindTexture(GL_TEXTURE_2D, idToTTex[i].texture);
 				//cout << "Texture " << i << endl;
 			}
+#endif
 		}
 		void SetUniformFloat(string uniformName, float& toSet)
 		{
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 			Use();
 			int UniformLocation = glGetUniformLocation(ShaderProgram, uniformName.c_str());
 			glUniform1f(UniformLocation, toSet);
+#endif
 		}
 		void SetUniformInt(string uniformName, int& toSet)
 		{
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 			Use();
 			int UniformLocation = glGetUniformLocation(ShaderProgram, uniformName.c_str());
 			glUniform1i(UniformLocation, toSet);
+#endif
 		}
 		void SetUniformBool(string uniformName, bool& toSet)
 		{
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 			Use();
 			int UniformLocation = glGetUniformLocation(ShaderProgram, uniformName.c_str());
 			glUniform1i(UniformLocation, toSet);
+#endif
 		}
 		void SetUniformVec4(string uniformName, vec4& toSet)
 		{
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 			Use();
 			int UniformLocation = glGetUniformLocation(ShaderProgram, uniformName.c_str());
 			glUniform4fv(UniformLocation, 1, glm::value_ptr(toSet));
+#endif
 		}
 		void SetUniformVec2(string uniformName, vec2& toSet)
 		{
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 			Use();
 			int UniformLocation = glGetUniformLocation(ShaderProgram, uniformName.c_str());
 			glUniform2fv(UniformLocation, 1, glm::value_ptr(toSet));
+#endif
 		}
 		void SetUniformMat4(string uniformName, glm::mat4& toSet)
 		{
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 			Use();
 			int UniformLocation = glGetUniformLocation(ShaderProgram, uniformName.c_str());
 			glUniformMatrix4fv(UniformLocation, 1, GL_FALSE, glm::value_ptr(toSet));
+#endif
 		}
 
 		void SetUniformTTexture(string uniformName, TTexture& texture)
 		{
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 			Use();
 			int UniformLocation = glGetUniformLocation(ShaderProgram, uniformName.c_str());
 
@@ -603,9 +628,11 @@ namespace Thruster
 
 			idToTTex[nameToId[uniformName]] = texture;
 			glUniform1i(UniformLocation, nameToId[uniformName]);
+#endif
 		}
 
 	private:
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 		map<int, TTexture> idToTTex;
 		map<string, int> nameToId;
 
@@ -647,20 +674,21 @@ namespace Thruster
 
 			return Shader;
 		}
+#endif
 	};
 
 	TShader grabMainShader()
 	{
 		TShader tempMain;
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 		tempMain.AttachShader("MainVertex.vert", GL_VERTEX_SHADER);
 		tempMain.AttachShader("MainFrag.frag", GL_FRAGMENT_SHADER);
+#endif
 
 		return tempMain;
 	}
 
 	TShader MainShader;
-
-#endif
 
 
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
@@ -812,6 +840,7 @@ namespace Thruster
 	struct WorldTransform {
 		glm::mat4 projection = glm::mat4(1.0f);
 		glm::mat4 view = glm::mat4(1.0f);
+		float mult;
 		TVec2D transform;
 	}
 	CurrentCameraTransform;
@@ -820,9 +849,9 @@ namespace Thruster
 	public:
 		TVec2D transform;
 		vec4 bgColor = vec4(0.0, 0.0, 0.0, 1.0);
-#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 		void Create()
 		{
+#ifndef PLATFORM_NO_FRAMEBUFFER
 			glGetIntegerv(GL_FRAMEBUFFER, &prev_Framebuffer);
 			glGenFramebuffers(1, &Framebuffer);
 			glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer);
@@ -853,6 +882,7 @@ namespace Thruster
 				cout << "Failure init rendering to buffer" << endl;
 
 			glBindFramebuffer(GL_FRAMEBUFFER, prev_Framebuffer);
+#endif
 		}
 		void Destroy()
 		{
@@ -874,6 +904,8 @@ namespace Thruster
 
 			}
 
+			CurrentCameraTransform.mult = screenMultiplier;
+
 			CurrentCameraTransform.transform = transform;
 
 			CurrentCameraTransform.view = translate(mat4(1.0f), vec3(CurrentCameraTransform.transform.x * -1.0f, CurrentCameraTransform.transform.y * -1.0f, 0.0f));
@@ -887,6 +919,7 @@ namespace Thruster
 		}
 		void StartFrameAsRenderer()
 		{
+#ifndef PLATFORM_NO_FRAMEBUFFER
 			BufferTexture.width = renderSize.x;
 			BufferTexture.height = renderSize.y;
 
@@ -908,14 +941,16 @@ namespace Thruster
 
 			glClearColor(bgColor.r, bgColor.b, bgColor.b, bgColor.a);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+#endif
 		}
 		void EndFrameAsRenderer()
 		{
-
+#ifndef PLATFORM_NO_FRAMEBUFFER
 			// Render to the screen
 			glBindFramebuffer(GL_FRAMEBUFFER, prev_Framebuffer);
 			// Render on the whole framebuffer, complete from the lower left corner to the upper right
 			//glViewport(0, 0, screenSize.w, screenSize.h);
+#endif
 		}
 		TTexture& GetRenderedFrame()
 		{
@@ -924,10 +959,9 @@ namespace Thruster
 		bool UseScaling = true;
 	private:
 		vec2 renderSize;
-		GLint prev_Framebuffer;
-		GLuint Framebuffer;
+		int prev_Framebuffer;
+		unsigned int Framebuffer;
 		TTexture BufferTexture;
-#endif
 	};
 
 	TCamera Camera;
@@ -946,12 +980,11 @@ namespace Thruster
 		return cpVertexList;
 	}
 
-	TVec2D ConvertNativeToWorldCords(TVec2D toConvert)
+	vec2 ConvertNativeToWorldCords(vec2 toConvert)
 	{
 		TVec2D screenCenter = getCenterOfScreen();
-		TVec2D screenSize = getScreenSize();
 
-		tfloat screenMultiplier = screenSize.h / TWin_ScreenHeight;
+		tfloat screenMultiplier = CurrentCameraTransform.mult;
 
 		return {
 			((toConvert.x - screenCenter.x) / screenMultiplier) + CurrentCameraTransform.transform.x,
@@ -971,15 +1004,6 @@ namespace Thruster
 			((((toConvert.y * -1) + CurrentCameraTransform.transform.y) * screenMultiplier) + screenCenter.y),
 		};
 	}
-
-#ifndef __PSP__
-	TVec2D getMousePosition()
-	{
-		int x, y;
-		SDL_GetMouseState(&x, &y);
-		return { (tfloat)x, (tfloat)y };
-	}
-#endif
 
 	inline void initPhysics()
 	{
@@ -1043,11 +1067,6 @@ namespace Thruster
 			myShader.Use();
 
 
-			TVec2D spritePos;
-
-#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
-
-
 			vec2 myCords;
 
 			if (attachedToCamera)
@@ -1058,6 +1077,10 @@ namespace Thruster
 			{
 				myCords = vec2(transform.x, transform.y);
 			}
+
+			TVec2D spritePos = {myCords.x, myCords.y, transform.w, transform.h, transform.r};
+
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 
 			worldModel.Position = vec3(myCords.x, myCords.y, 0.0f);
 			worldModel.Scale = vec3(worldSize.w * transform.w, worldSize.h * transform.h, 1.0f);
@@ -1094,11 +1117,12 @@ namespace Thruster
 			// Set to use TVec2D ConvertNativeToWorldCords(TVec2D toConvert) later
 			// Center of screen is (0,0) +Y goes up
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_SDL2
+			TVec2D screenCenter = getCenterOfScreen();
 			SDL_Rect screenPos = {
-				(int)(((((spritePos.x + cameraPosX)) - ((worldSize.w * spritePos.w) / 2)) * screenMultiplier) + screenCenter.x),
-				(int)(((((((spritePos.y) * -1) + cameraPosY)) - ((worldSize.h * spritePos.h) / 2)) * screenMultiplier) + screenCenter.y),
-				(int)(((worldSize.w * spritePos.w) * screenMultiplier)),
-				(int)(((worldSize.h * spritePos.h) * screenMultiplier))
+				(int)(((((spritePos.x - CurrentCameraTransform.transform.x)) - ((worldSize.w * spritePos.w) / 2)) * CurrentCameraTransform.mult) + screenCenter.x),
+				(int)(((((((spritePos.y) * -1) + CurrentCameraTransform.transform.y)) - ((worldSize.h * spritePos.h) / 2)) * CurrentCameraTransform.mult) + screenCenter.y),
+				(int)(((worldSize.w * spritePos.w) * CurrentCameraTransform.mult)),
+				(int)(((worldSize.h * spritePos.h) * CurrentCameraTransform.mult))
 			};
 			SDL_Rect renderBlit;
 			bool noBlit = false;
@@ -1890,17 +1914,21 @@ namespace Thruster
 			sprite.create(Cookie, pos);
 
 			lightShader = grabMainShader();
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 			lightShader.AttachShader("defaultVert.vert", GL_VERTEX_SHADER);
 			lightShader.AttachShader("lightFrag.frag", GL_FRAGMENT_SHADER);
+#endif
 			lightShader.Create();
 		}
 		void Draw()
 		{
+#ifndef PLATFORM_NO_FRAMEBUFFER
 			lightShader.Use();
 			lightShader.SetUniformVec4("lightColor", color);
 			lightShader.SetUniformFloat("brightness", brightness);
 			lightShader.SetUniformTTexture("lightBuffer", lightBuff.GetTexture());
 			sprite.draw(lightShader);
+#endif
 		}
 		vec4 color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 		float brightness = 1.0f;

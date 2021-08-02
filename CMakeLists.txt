@@ -3,6 +3,10 @@ cmake_minimum_required (VERSION 3.6)
 
 project (BoxPushingGame VERSION 1.0.0)
 
+option(RENDERER_SDL2 "Use the SDL2 Renderer - must disable RENDERER_OPENGL3" ON)
+option(RENDERER_OPENGL3 "Use the OpenGL3 Renderer - must disable RENDERER_SDL2" OFF)
+option(RELEASE_MODE "Should compile in release mode?" ON)
+
 set(CMAKE_CXX_STANDARD 17)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -19,24 +23,30 @@ include_directories("${CMAKE_SOURCE_DIR}/extlibs/chipmunk/include")
 set(BUILD_STATIC_LIBS TRUE)
 add_subdirectory("${CMAKE_SOURCE_DIR}/extlibs/glm")
 
-find_package(OpenGL REQUIRED)
-find_package(SDL2 REQUIRED)
-find_package(SDL2_mixer REQUIRED)
-
-include_directories(${SDL2_INCLUDE_DIRS})
-include_directories(${SDL_mixer_INCLUDE_DIRS})
+if (RENDERER_OPENGL3)
+    find_package(OpenGL REQUIRED)
+endif()
+if (NOT EMSCRIPTEN)
+    find_package(SDL2 REQUIRED)
+    find_package(SDL2_mixer REQUIRED)
+    include_directories(${SDL2_INCLUDE_DIRS})
+    include_directories(${SDL_mixer_INCLUDE_DIRS})
+endif()
 
 file(GLOB GAME_SOURCES "src/*")
 
 # resolve platform dependencies and names
 if (EMSCRIPTEN)
-    set(CMAKE_EXECUTABLE_SUFFIX ".html")
-    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-s ALLOW_MEMORY_GROWTH=1 -s WASM=1 -s USE_SDL=2 -s DEMANGLE_SUPPORT=1 --preload-file ${CMAKE_SOURCE_DIR}/assets_compiled@/")
     set(TARGET_NAME ${PROJECT_NAME})
-    set(PLATFORM_SPECIFIC_INCLUDES
-        GLESv2
-    )
+    set(CMAKE_EXECUTABLE_SUFFIX ".html")
     add_executable(${TARGET_NAME} ${GAME_SOURCES})
+    set_target_properties(${TARGET_NAME} PROPERTIES LINK_FLAGS "-s ALLOW_MEMORY_GROWTH=1 -s WASM=1 -s USE_SDL_MIXER=2 -s USE_SDL=2 -s DEMANGLE_SUPPORT=1 --preload-file ${CMAKE_SOURCE_DIR}/assets_web@/")
+    include_directories("D:/NewSoftwareProjects/Libraries/SDL2/include")
+    if (RENDERER_OPENGL3)
+        set(PLATFORM_SPECIFIC_INCLUDES
+            GLESv2
+        )
+    endif()
 elseif(ANDROID)
     add_subdirectory(SDL)
     set(TARGET_NAME main)
@@ -59,19 +69,32 @@ elseif(UNIX)
     add_executable(${TARGET_NAME} ${GAME_SOURCES})
 elseif(WIN32)
     set(TARGET_NAME ${PROJECT_NAME})
-    set(PLATFORM_SPECIFIC_INCLUDES
-        opengl32
-    )
+    if (RENDERER_OPENGL3)
+        set(PLATFORM_SPECIFIC_INCLUDES
+            opengl32
+        )
+    endif()
     add_executable(${TARGET_NAME} WIN32 ${GAME_SOURCES} resource/resource.rc)
 endif()
 
+if (RENDERER_SDL2)
+    target_compile_definitions(${TARGET_NAME} PUBLIC GRAPHICS_IMPLEMENTATION=0)
+elseif (RENDERER_OPENGL3)
+    target_compile_definitions(${TARGET_NAME} PUBLIC GRAPHICS_IMPLEMENTATION=2)
+endif()
+
+if (RELEASE_MODE)
+    target_compile_definitions(${TARGET_NAME} PUBLIC TBUILD_TYPE=0)
+else()
+    target_compile_definitions(${TARGET_NAME} PUBLIC TBUILD_TYPE=1)
+endif()
 
 target_link_libraries(${TARGET_NAME}
 	glm::glm_static
 	lua_static
 	chipmunk
-    SDL2::Main
-    SDL2::Mixer
+    #SDL2::Main
+    #SDL2::Mixer
 	${PLATFORM_SPECIFIC_INCLUDES}
 )
 

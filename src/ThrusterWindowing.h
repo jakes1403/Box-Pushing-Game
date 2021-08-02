@@ -27,7 +27,7 @@ See LICENSE file at root of project for license
 #define BUTTON_LEFT 2 // Hat Left
 #define BUTTON_RIGHT 3 // Hat Right
 
-#define BUTTON_1 4 // A or Cross
+#define BUTTON_1 4 // A or Cross or Space
 #define BUTTON_2 5 // B or Circle
 #define BUTTON_3 6 // X or Square
 #define BUTTON_4 7 // Y or Triangle
