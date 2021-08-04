@@ -562,6 +562,20 @@ void wrongBox(int color, TVec2D indicatorPos)
 	LI_RunFunction("WrongBox");
 }
 
+vector<TTexture> boxTextures;
+TTexture LoadBox(int color)
+{
+	TTexture boxTex;
+
+	boxTex.loadImage("box.png");
+
+	vec3 t = ColorToTint(color);
+
+	tint(boxTex, t.r * 255, t.g * 255, t.b * 255);
+	
+	return boxTex;
+}
+
 class Box {
 public:
 	void Create(TVec2D cords, int colorSet)
@@ -681,20 +695,6 @@ private:
 	TVec2D direction = { 0, 1000 };
 };
 
-vector<TTexture> boxTextures;
-TTexture LoadBox(int color)
-{
-	TTexture boxTex;
-
-	boxTex.loadImage("box.png");
-
-	vec3 t = ColorToTint(color);
-
-	tint(boxTex, t.r * 255, t.g * 255, t.b * 255);
-	
-	return boxTex;
-}
-
 class Boxes {
 public:
 	void load()
@@ -742,6 +742,8 @@ public:
 #endif
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_SDL2
 			boxSprite.spriteTex = boxTextures[boxList[i].color];
+			boxSprite.transform = boxList[i].boxObject.transform;
+			boxSprite.draw(boxShader);
 #endif
 		}
 	}
@@ -1537,9 +1539,10 @@ inline double hires_time()
 }
 
 #ifndef __PSP__
+bool EXIT_PROGRAM = false;
 inline bool isRunning()
 {
-	return true;
+	return !EXIT_PROGRAM;
 }
 #endif
 
@@ -1550,8 +1553,6 @@ static unsigned int size_ASSETS_TPAK = 1352124;
 
 std::function<void()> loop;
 void main_loop() { loop(); }
-
-static unsigned int __attribute__((aligned(16))) list[262144];
 
 int main(int argc, char* args[])
 {
@@ -1569,8 +1570,12 @@ int main(int argc, char* args[])
 	AssetsTpakFile.Size = size_ASSETS_TPAK;
 	TAssetManager.SetLoadLocationToTPakTFile(AssetsTpakFile);
 #else
-	PathToTPak("assets/").WriteFull("assets.tpak");
+	//PathToTPak("assets/").WriteFull("assets.tpak");
+#if __EMSCRIPTEN__
+	TAssetManager.SetLoadLocationToPath("assets");
+#else
 	TAssetManager.SetLoadLocationToTPak("assets.tpak");
+#endif
 #endif
 
  	//TAssetManager.SetLoadLocationToPath("assets/");
@@ -1840,7 +1845,7 @@ int main(int argc, char* args[])
 	loop = [&]
  	{
  		runningStatus = TWin_BeginFrame(gameCurrentFrame++);
- 		if (runningStatus == TWin_Exit) return;
+ 		if (runningStatus == TWin_Exit) EXIT_PROGRAM = true;
 #ifdef __PSP__
 		g2dClear(BLACK);
 #endif

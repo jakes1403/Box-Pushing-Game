@@ -65,5 +65,12 @@
         "xutility": "cpp",
         "sstream": "cpp",
         "string_view": "cpp"
+    },
+    "cmake.configureSettings": {
+        "SDL2MAIN_LIBRARY": "D:/NewSoftwareProjects/Libraries/SDL2/lib/x64/SDL2main.lib", 
+        "SDL2_LIBRARY": "D:/NewSoftwareProjects/Libraries/SDL2/lib/x64/SDL2.lib", 
+        "SDL2_INCLUDE_DIR": "D:/NewSoftwareProjects/Libraries/SDL2/include",
+        "SDL2_MIXER_INCLUDE_DIR": "D:/NewSoftwareProjects/Libraries/SDL2/include",
+        "SDL2_MIXER_LIBRARY": "D:/NewSoftwareProjects/Libraries/SDL2/lib/x64/SDL2_mixer.lib"
     }
 }
