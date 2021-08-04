@@ -14,10 +14,12 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 set(BUILD_STATIC ON)
 set(BUILD_DEMOS OFF)
 add_subdirectory("${CMAKE_SOURCE_DIR}/extlibs/chipmunk")
-add_subdirectory("${CMAKE_SOURCE_DIR}/extlibs/lua")
+if (NOT PLATFORM_PSP)
+    add_subdirectory("${CMAKE_SOURCE_DIR}/extlibs/lua")
 
-include_directories("${CMAKE_SOURCE_DIR}/extlibs/lua/include")
-include_directories("${CMAKE_SOURCE_DIR}/extlibs/lua/src")
+    include_directories("${CMAKE_SOURCE_DIR}/extlibs/lua/include")
+    include_directories("${CMAKE_SOURCE_DIR}/extlibs/lua/src")
+endif()
 include_directories("${CMAKE_SOURCE_DIR}/extlibs/chipmunk/include")
 
 set(BUILD_STATIC_LIBS TRUE)
@@ -27,15 +29,65 @@ if (RENDERER_OPENGL3)
     find_package(OpenGL REQUIRED)
 endif()
 if (NOT EMSCRIPTEN)
-    find_package(SDL2 REQUIRED)
-    find_package(SDL2_mixer REQUIRED)
-    include_directories(${SDL2_INCLUDE_DIRS})
-    include_directories(${SDL_mixer_INCLUDE_DIRS})
+    if (NOT PLATFORM_PSP)
+        find_package(SDL2 REQUIRED)
+        find_package(SDL2_mixer REQUIRED)
+        include_directories(${SDL2_INCLUDE_DIRS})
+        include_directories(${SDL_mixer_INCLUDE_DIRS})
+        set(SDL2_link
+            SDL2::Main 
+            SDL2::Mixer
+        )
+        set(LUA_link lua_static)
+    endif()
 endif()
 
 file(GLOB GAME_SOURCES "src/*")
 
 # resolve platform dependencies and names
+if (PLATFORM_PSP)
+    message(STATUS "Game set up for Sony PSP...")
+    set(TARGET_NAME ${PROJECT_NAME})
+    set(SDL2_link
+        SDL2
+        SDL2_image
+    )
+    add_executable(${TARGET_NAME} ${GAME_SOURCES} "src/psp/callback.cpp" "src/psp/callback.h" "src/psp/glib2d.c" "src/psp/glib2d.h")
+    set(PLATFORM_SPECIFIC_INCLUDES
+        lua
+        m
+        ${PSP_LIBRARIES}
+        stdc++
+
+        vorbis
+        ogg
+        png
+        jpeg
+        z
+
+        pspvram
+
+        GL
+        pspgum
+        pspgu
+        pspge
+        pspvfpu
+
+        c
+
+        pspuser
+        pspkernel
+        pspaudio
+        pspdisplay
+        pspdebug
+        pspctrl
+        pspnet
+        pspnet_inet
+        pspnet_resolver
+        psphprm
+        psprtc
+    )
+endif()
 if (EMSCRIPTEN)
     set(TARGET_NAME ${PROJECT_NAME})
     set(CMAKE_EXECUTABLE_SUFFIX ".html")
@@ -91,12 +143,15 @@ endif()
 
 target_link_libraries(${TARGET_NAME}
 	glm::glm_static
-	lua_static
-	chipmunk
-    #SDL2::Main
-    #SDL2::Mixer
+    ${LUA_link}
+    chipmunk
+	chipmunk_static
+    ${SDL2_link}
 	${PLATFORM_SPECIFIC_INCLUDES}
 )
+if (PLATFORM_PSP)
+    create_pbp_file(TARGET ${TARGET_NAME} TITLE "Box Pushing Game" ICON_PATH "icon0.png" BACKGROUND_PATH "PIC1.png")
+endif()
 
 # Tell CPack to generate a .deb package
 set(CPACK_GENERATOR "DEB")

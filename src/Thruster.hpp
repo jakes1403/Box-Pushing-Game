@@ -10,7 +10,10 @@ See LICENSE file at root of project for license
 #include <pspkernel.h>
 #include <pspdebug.h>
 #include <pspdisplay.h>
-#include "./common/callback.h"
+#include "psp/callback.h"
+#include "stdlib.h"
+#include <SDL2/SDL_image.h>
+#include "psp/glib2d.h"
 #endif
 
 #include "ThrusterConfig.h"
@@ -28,10 +31,14 @@ See LICENSE file at root of project for license
 
 #include <memory>
 
+#include <algorithm>
+
 #include "TFile.h"
 
 #ifndef EMSCRIPTEN
+#ifndef __PSP__
 #include "TMessageBox.hpp"
+#endif
 #endif
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -78,6 +85,7 @@ namespace Thruster
 					return current.file;
 				}
 			}
+			cout << "Error grabbing file " << name << "!" << endl;
 		}
 
 		void Free()
@@ -87,6 +95,99 @@ namespace Thruster
 				myFile.file.Destroy();
 			}
 			myFiles.clear();
+		}
+
+		void UseTFileAndLoad(TFile file)
+		{
+			Free();
+			string data;
+			char c;
+			bool isLastNewLine = false;
+			bool stop = false;
+			size_t u = 0;
+			while (!stop)
+			{
+				c = file.Data[u++];
+				if (c == '\n' && isLastNewLine)
+				{
+					stop = true;
+				}
+				if (c == '\n')
+				{
+					isLastNewLine = true;
+				}
+				else
+				{
+					isLastNewLine = false;
+				}
+				data += c;
+			}
+			unsigned long long dataOffset = data.size();
+
+			data.pop_back();
+			data.pop_back();
+
+			string buf = "";
+
+			vector<TFileInfo> inf;
+
+			vector<string> raw;
+
+			for (unsigned long long i = 0; i < data.size(); i++)
+			{
+				buf += data[i];
+				if (data[i] == '\n')
+				{
+					buf.pop_back();
+					raw.push_back(buf);
+					buf = "";
+				}
+				if (data[i] == '\t')
+				{
+					buf.pop_back();
+				}
+			}
+			raw.push_back(buf);
+
+			for (int i = 0; i < raw.size(); i += 2)
+			{
+				TFileInfo info;
+				info.name = raw[i];
+#ifdef __PSP__
+				info.offset = strtol(raw[i + 1].c_str(), NULL, 10);
+#else
+				info.offset = std::stoull(raw[i + 1]);
+#endif
+				inf.push_back(info);
+			}
+
+			TFileInfoQuery queried;
+			queried.dataOffset = dataOffset + 1;
+			queried.fileInfos = inf;
+
+			unsigned long long size = file.Size;
+			int numItems = queried.fileInfos.size();
+
+			for (int i = 0; i < numItems; i++)
+			{
+				unsigned long long myLength;
+				if (i + 1 == numItems)
+				{
+					unsigned long long last = size;
+					myLength = last - queried.fileInfos[i].offset;
+				}
+				else
+				{
+					myLength = queried.fileInfos[i + 1].offset - queried.fileInfos[i].offset;
+				}
+				PackedFile toPush;
+				toPush.file.Size = myLength;
+				toPush.file.Data = new char[myLength];
+				toPush.file.Data = file.Data + queried.dataOffset + queried.fileInfos[i].offset;
+				toPush.name = queried.fileInfos[i].name;
+
+				myFiles.push_back(toPush);
+			}
 		}
 
 		void UseFile(string file)
@@ -243,7 +344,11 @@ namespace Thruster
 				{
 					TFileInfo info;
 					info.name = raw[i];
+#ifdef __PSP__
+					info.offset = strtol(raw[i + 1].c_str(), NULL, 10);
+#else
 					info.offset = std::stoull(raw[i + 1]);
+#endif
 					inf.push_back(info);
 				}
 
@@ -279,6 +384,12 @@ namespace Thruster
 			gameAssets.UseFile(path);
 
 			gameAssets.ReadFull();
+		}
+		void SetLoadLocationToTPakTFile(TFile file)
+		{
+			loadFromPak = true;
+
+			gameAssets.UseTFileAndLoad(file);
 		}
 		TFile& RequestAsset(string name)
 		{
@@ -422,9 +533,23 @@ namespace Thruster
 #endif
 			stbi_set_flip_vertically_on_load(flip);
 			unsigned char* raw = stbi_load_from_memory((stbi_uc*)requestedFile.Data, requestedFile.Size, &width, &height, &numChannels, 4);
+			if (raw == NULL)
+			{
+				cout << "Could not load image " << path << endl;
+				exit(-1);
+			}
+#ifndef __PSP__
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_SDL2
 			SDL_Surface* loaded = SDL_CreateRGBSurfaceWithFormatFrom((void*)raw, width, height, 32, 4*width, SDL_PIXELFORMAT_RGBA32);
 			loadRaw(loaded);
+#endif
+#else
+			if (raw == NULL)
+			{
+				pspDebugScreenPrintf("Unable to load texture %s. Aborting!\n", path);
+				exit(-1);
+			}
+			textureG2D = g2dTexLoad(raw, width, height, G2D_SWIZZLE);
 #endif
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 			glGenTextures(1, &texture);
@@ -502,6 +627,9 @@ namespace Thruster
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 		GLenum format;
 		unsigned int texture;
+#endif
+#ifdef __PSP__
+		g2dTexture* textureG2D;
 #endif
 	private:
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
@@ -852,6 +980,7 @@ namespace Thruster
 		void Create()
 		{
 #ifndef PLATFORM_NO_FRAMEBUFFER
+#ifndef __PSP__
 			glGetIntegerv(GL_FRAMEBUFFER, &prev_Framebuffer);
 			glGenFramebuffers(1, &Framebuffer);
 			glBindFramebuffer(GL_FRAMEBUFFER, Framebuffer);
@@ -882,6 +1011,7 @@ namespace Thruster
 				cout << "Failure init rendering to buffer" << endl;
 
 			glBindFramebuffer(GL_FRAMEBUFFER, prev_Framebuffer);
+#endif
 #endif
 		}
 		void Destroy()
@@ -920,6 +1050,7 @@ namespace Thruster
 		void StartFrameAsRenderer()
 		{
 #ifndef PLATFORM_NO_FRAMEBUFFER
+#ifndef __PSP__
 			BufferTexture.width = renderSize.x;
 			BufferTexture.height = renderSize.y;
 
@@ -942,14 +1073,17 @@ namespace Thruster
 			glClearColor(bgColor.r, bgColor.b, bgColor.b, bgColor.a);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 #endif
+#endif
 		}
 		void EndFrameAsRenderer()
 		{
 #ifndef PLATFORM_NO_FRAMEBUFFER
+#ifndef __PSP__
 			// Render to the screen
 			glBindFramebuffer(GL_FRAMEBUFFER, prev_Framebuffer);
 			// Render on the whole framebuffer, complete from the lower left corner to the upper right
 			//glViewport(0, 0, screenSize.w, screenSize.h);
+#endif
 #endif
 		}
 		TTexture& GetRenderedFrame()
@@ -1116,6 +1250,45 @@ namespace Thruster
 
 			// Set to use TVec2D ConvertNativeToWorldCords(TVec2D toConvert) later
 			// Center of screen is (0,0) +Y goes up
+#ifdef __PSP__
+			g2dBeginRects(spriteTex.textureG2D);
+
+			if (isAnimated)
+			{
+				g2dSetCropXY(((animatedFrameSize.w * currentFrame) + (animatedFrameSize.x * currentFrame)), 0);
+            	g2dSetCropWH(animatedFrameSize.w, animatedFrameSize.h);
+			}
+
+			float flipOnXNum;
+			float flipOnYNum;
+
+			if (flipX)
+			{
+				flipOnXNum = 1.0f;
+			}
+			else
+			{
+				flipOnXNum = -1.0f;
+			}
+			if (flipY)
+			{
+				flipOnYNum = -1.0f;
+			}
+			else
+			{
+				flipOnYNum = 1.0f;
+			}
+
+			g2dSetScaleWH(std::max(0.0f, (worldSize.w * spritePos.w)) * flipOnXNum, std::max(0.0f, (worldSize.h * spritePos.h)) * flipOnYNum);
+			g2dSetCoordMode(G2D_CENTER);
+			g2dSetCoordXY((float)(G2D_SCR_W/2.0f) + spritePos.x  - CurrentCameraTransform.transform.x, (float)(G2D_SCR_H/2.0f) - spritePos.y  + CurrentCameraTransform.transform.y);
+			g2dSetRotation(transform.r + 90);
+			g2dSetColor(G2D_RGBA((int)(colorTint.r * 255.0f), (int)(colorTint.g * 255.0f), (int)(colorTint.b * 255.0f), (int)(colorTint.a * 255.0f)));
+			
+			//g2dSetColor(AZURE);
+			g2dAdd();
+			g2dEnd();
+#else
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_SDL2
 			TVec2D screenCenter = getCenterOfScreen();
 			SDL_Rect screenPos = {
@@ -1185,11 +1358,15 @@ namespace Thruster
 
 			}
 #endif
+#endif
 		}
 		void destroy()
 		{
 
 		}
+#ifdef __PSP__
+		vec4 colorTint = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+#endif
 		bool isAnimated = false;
 		TVec2D animatedFrameSize; // X and Y are padding, w and h are size
 		int currentFrame;
@@ -1347,24 +1524,34 @@ namespace Thruster
 	public:
 		void load(string path)
 		{
+			#ifndef __PSP__
 			TFile& soundFile = TAssetManager.RequestAsset(path);
 			sound = Mix_LoadWAV_RW(TFileToSDL_RW(soundFile), 1);
+			#endif
 		}
 		void play()
 		{
+			#ifndef __PSP__
 			Mix_PlayChannel(-1, sound, 0);
+			#endif
 		}
 		void playLooped()
 		{
+			#ifndef __PSP__
 			Mix_PlayChannel(-1, sound, -1);
+			#endif
 		}
 		void destroy()
 		{
+			#ifndef __PSP__
 			Mix_FreeChunk(sound);
+			#endif
 		}
 		// Add destroy function soon
 	private:
+	#ifndef __PSP__
 		Mix_Chunk* sound;
+	#endif
 	};
 
 	TVec2D spriteToHitBox(TSprite sprite)
@@ -1923,11 +2110,13 @@ namespace Thruster
 		void Draw()
 		{
 #ifndef PLATFORM_NO_FRAMEBUFFER
+#ifndef __PSP__
 			lightShader.Use();
 			lightShader.SetUniformVec4("lightColor", color);
 			lightShader.SetUniformFloat("brightness", brightness);
 			lightShader.SetUniformTTexture("lightBuffer", lightBuff.GetTexture());
 			sprite.draw(lightShader);
+#endif
 #endif
 		}
 		vec4 color = vec4(1.0f, 1.0f, 1.0f, 1.0f);

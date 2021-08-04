@@ -19,6 +19,7 @@
         https://glad.dav1d.de/#profile=core&language=c&specification=gl&loader=on&api=gl%3D3.3
 */
 
+#ifndef __PSP__
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1138,3 +1139,4 @@ int gladLoadGLLoader(GLADloadproc load) {
 	return GLVersion.major != 0 || GLVersion.minor != 0;
 }
 
+#endif

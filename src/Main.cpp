@@ -6,7 +6,21 @@ See LICENSE file at root of project for license
 // This is the game driving code for Box Pushing Game.
 // Here you will find all the gameplay-related code, as well as stuff for the menu
 
+#ifdef __PSP__
+#include <pspkernel.h>
+#include <pspdebug.h>
+#include <pspdisplay.h>
+#include "psp/glib2d.h"
+#define printConsole(text) sceIoWrite(1, text, strlen(text))
+
+PSP_MODULE_INFO("Box Pushing Game", PSP_MODULE_USER, 1, 0);
+PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_USER | THREAD_ATTR_VFPU);
+PSP_HEAP_SIZE_KB(-256);
+#endif
+
 #include "Thruster.hpp"
+
+#include <functional>
 
 #include "LuaIntegration.h"
 
@@ -53,14 +67,6 @@ TSound themeMusic;
 TShader frameBuffShader;
 
 shared_ptr<TGameObject> gameSceneRoot;
-
-#ifdef __PSP__
-#define printConsole(text) sceIoWrite(1, text, strlen(text))
-
-PSP_MODULE_INFO(GameName, PSP_MODULE_USER, 1, 0);
-PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_USER | THREAD_ATTR_VFPU);
-PSP_HEAP_SIZE_MAX();
-#endif
 
 #if THRUSTER_MODE == MODE_EDITOR && COMPILE_WITH_IMGUI
 SDL_Texture* target;
@@ -659,6 +665,10 @@ public:
 		vec4 tint = vec4(tintColor, 1.0f);
 		shader.SetUniformVec4("tint", tint);
 
+#ifdef __PSP__
+		boxObject.sprite.colorTint = tint;
+#endif
+
 		boxObject.update(shader);
 	}
 	void Destroy()
@@ -693,10 +703,8 @@ public:
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 		boxShader.AttachShader("boxFrag.frag", GL_FRAGMENT_SHADER);
 		boxShader.AttachShader("defaultVert.vert", GL_VERTEX_SHADER);
-#endif
-
 		boxShader.Create();
-
+#endif
 		boxTexture.loadImage("box.png");
 
 		boxSprite.create(boxTexture, { 0, 0 });
@@ -723,16 +731,18 @@ public:
 	{
 		for (int i = 0; i < current; i++)
 		{
-			// Temp fix for weird issue when building with CMake
 			boxList[i].Update(boxShader);
+#if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
+			// Temp fix for weird issue when building with CMake
 			vec3 tintColor = ColorToTint(boxList[i].color);
 			vec4 tint = vec4(tintColor, 1.0f);
 			boxShader.SetUniformVec4("tint", tint);
 			boxSprite.transform = boxList[i].boxObject.transform;
+			boxSprite.draw(boxShader);
+#endif
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_SDL2
 			boxSprite.spriteTex = boxTextures[boxList[i].color];
 #endif
-			boxSprite.draw(boxShader);
 		}
 	}
 	void removeAll()
@@ -784,7 +794,13 @@ void WriteNumDigit(int digit)
 
 void WriteNum(int num, TVec2D position)
 {
+	#ifdef __PSP__
+	char result[6];
+	sprintf(result, "%d", num);
+	string asString = result;
+	#else
 	string asString = to_string(num);
+	#endif
 	numCursorPos = 0.0f;
 	numPosition = position;
 	for (int i = 0; i < asString.length(); i++)
@@ -817,7 +833,11 @@ vec2 moveOverTimeTo(vec2 myPos, vec2 place, float slack)
 	vec2 dif = place - myPos;
 	if (abs(dif.x) > slack || abs(dif.y) > slack)
 	{
+		#ifndef __PSP__
 		myPos += dif / (float)deltaTime;
+		#else
+		myPos += dif / 30.0f;
+		#endif
 	}
 	return myPos;
 }
@@ -1028,7 +1048,14 @@ public:
 		Score = 0;
 		baseScoreInc = 1;
 		allBoxes.removeAll();
-		LI_ExecuteString(TFileToString(TAssetManager.RequestAsset(string("level") + to_string(levelNum) + string(".lua"))).c_str());
+			#ifdef __PSP__
+			char result[6];
+			sprintf(result, "%d", levelNum);
+			string asString = result;
+			#else
+			string asString = to_string(levelNum);
+			#endif
+		LI_ExecuteString(TFileToString(TAssetManager.RequestAsset(string("level") + asString + string(".lua"))).c_str());
 		//LI_ExecuteLua((string("assets/level") + to_string(levelNum) + string(".lua")).c_str());
 		LI_RunFunction("Start");
 
@@ -1236,7 +1263,11 @@ public:
 
 		Camera.transform = { (tfloat)fmin(fmax((float)newCamPos.x, -245), 270), (tfloat)fmin(fmax((float)newCamPos.y, -60), 60) };
 
+		#ifdef __PSP__
+		physicsStep(1.0f / 60.0f);
+		#else
 		physicsStep(1.0f / TWin_CurrentFPS);
+		#endif
 
 	}
 
@@ -1260,7 +1291,7 @@ public:
 	}
 	void Start() override
 	{
-		windLoop.load("wind.wav");
+		//windLoop.load("wind.wav");
 		//windLoop.playLooped();
 		//themeMusic.playLooped();
 		bool useLighting = true;
@@ -1454,6 +1485,9 @@ public:
 	 	SDL_RenderClear(renderer);
 		splashSprite.transform.y = cos(((float)SDL_GetTicks() / 1000.0f)) * 10;
 #endif
+#ifdef __PSP__
+		splashSprite.transform.y = cos(((float)SDL_GetTicks() / 1000.0f)) * 10;
+#endif
 		splashSprite.draw(splashShader);
 		thrusterSprite.draw();
 
@@ -1474,6 +1508,8 @@ private:
 	TSprite thrusterSprite;
 };
 
+#ifndef __PSP__
+
 #include <filesystem>
 
 namespace fs = std::filesystem;
@@ -1491,6 +1527,7 @@ TPak PathToTPak(string path)
 	}
 	return packed;
 }
+#endif
 
 TSound boxSound;
 
@@ -1499,22 +1536,44 @@ inline double hires_time()
 	return (double)SDL_GetPerformanceCounter() / 10000000.0f;
 }
 
+#ifndef __PSP__
+inline bool isRunning()
+{
+	return true;
+}
+#endif
+
+#ifdef __PSP__
+static unsigned int size_ASSETS_TPAK = 1352124;
+#include "psp/assetsFile.c"
+#endif
+
 std::function<void()> loop;
 void main_loop() { loop(); }
 
+static unsigned int __attribute__((aligned(16))) list[262144];
+
 int main(int argc, char* args[])
 {
-
 	#ifdef __PSP__
-	pspDebugScreenInit();
+	//pspDebugScreenInit();
 	setupExitCallback();
 	#endif
 
-	//PathToTPak("assets/").WriteFull("assets.tpak");
+	// Run this when you want to pack the assets into a tpak
+// 	PathToTPak("assets/").WriteFull("assets.tpak");
 
-	//TAssetManager.SetLoadLocationToTPak("assets.tpak");
+#ifdef __PSP__
+	TFile AssetsTpakFile;
+	AssetsTpakFile.Data = (char*)ASSETS_TPAK;
+	AssetsTpakFile.Size = size_ASSETS_TPAK;
+	TAssetManager.SetLoadLocationToTPakTFile(AssetsTpakFile);
+#else
+	PathToTPak("assets/").WriteFull("assets.tpak");
+	TAssetManager.SetLoadLocationToTPak("assets.tpak");
+#endif
 
-	TAssetManager.SetLoadLocationToPath("assets/");
+ 	//TAssetManager.SetLoadLocationToPath("assets/");
 
 	Thruster_Init(GameName, ScreenWidth, ScreenHeight);
 
@@ -1562,27 +1621,32 @@ int main(int argc, char* args[])
 	lua_pushcfunction(state, l_setDarkness);
 	lua_setglobal(state, "setDarkness");
 
+	#ifndef __PSP__
 	TTexture noiseTex;
 	noiseTex.loadImage("noise.png");
+	#endif
 
 	MainShader.Use();
-
+#ifndef __PSP__
 	MainShader.SetUniformTTexture("noiseTex", noiseTex);
-
+#endif
 	frameBuffShader = grabMainShader();
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 	frameBuffShader.AttachShader("frameBuffShader.frag", GL_FRAGMENT_SHADER);
 	frameBuffShader.AttachShader("defaultVert.vert", GL_VERTEX_SHADER);
 #endif
 
+#ifndef __PSP__
 	TTexture slateTex;
 	slateTex.loadImage("SlateTexture.png");
+#endif
 
 	frameBuffShader.Use();
-
+#ifndef __PSP__
 	frameBuffShader.SetUniformTTexture("slateTex", slateTex);
 
 	frameBuffShader.SetUniformTTexture("noiseTex", noiseTex);
+#endif
 
 	frameBuffShader.Create();
 
@@ -1680,8 +1744,12 @@ int main(int argc, char* args[])
 	gameCountdown;
 	oldCountdown = 0;
 
+	#ifndef __PSP__
 	TTexture lightCookie;
 	lightCookie.loadImage("lightcookie.png");
+	#endif
+
+#ifndef __PSP__
 
 	lightBuff.Init();
 
@@ -1743,6 +1811,7 @@ int main(int argc, char* args[])
 	uiLight3.sprite.attachedToCamera = true;
 	uiLight3.color = vec4(0.957, 0.643, 0.376, 1.0f);
 	uiLight3.brightness = 1.0;
+#endif
 
 	Camera.Create();
 
@@ -1763,10 +1832,20 @@ int main(int argc, char* args[])
 	GameWindowInfo.transform.w = (tfloat)w;
 	GameWindowInfo.transform.h = (tfloat)h;
 
+
+ 	unsigned int b = 0;
+
+ 	// int rot = 0, i, branches = 4;
+
 	loop = [&]
-	{
-		runningStatus = TWin_BeginFrame(gameCurrentFrame++);
-		if (runningStatus == TWin_Exit) return;
+ 	{
+ 		runningStatus = TWin_BeginFrame(gameCurrentFrame++);
+ 		if (runningStatus == TWin_Exit) return;
+#ifdef __PSP__
+		g2dClear(BLACK);
+#endif
+
+		//pspDebugScreenPrintf("%d\n", gameCurrentFrame);
 
 		Thruster_Update();
 
@@ -1774,10 +1853,11 @@ int main(int argc, char* args[])
 
 		joyAxis = { inputQuery.axis[Axis1X], inputQuery.axis[Axis1Y] };
 		joyAxis = normalize(joyAxis);
-
+#ifndef __PSP__
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_SDL2
 	 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 	 	SDL_RenderClear(renderer);
+#endif
 #endif
 
 		Camera.Start(TWin_ScreenWidth, TWin_ScreenHeight, getScreenSize().w, getScreenSize().h);
@@ -1792,6 +1872,7 @@ int main(int argc, char* args[])
 		Camera.End();
 
 #ifndef PLATFORM_NO_FRAMEBUFFER
+#ifndef __PSP__
 		frameBuffShader.Use();
 
 		frameBuffShader.SetUniformTTexture("lightBuffTex", lightBuff.GetTexture());
@@ -1800,18 +1881,23 @@ int main(int argc, char* args[])
 		glClear(GL_COLOR_BUFFER_BIT);
 		RenderCamera(Camera, TWin_ScreenWidth, TWin_ScreenHeight, getScreenSize().w, getScreenSize().h, frameBuffShader);
 #endif
+#endif
+#ifdef __PSP__
+		g2dFlip(G2D_VSYNC);
+#endif
 
-		TWin_EndFrame();
+ 		TWin_EndFrame();
 	};
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(main_loop, 0, true);
 #else
-    while(true) main_loop();
+    while(isRunning()) main_loop();
 #endif
 
 	TWin_DestroyWindow();
 
 	#ifdef __PSP__
+	//sceGuTerm();
 	sceKernelExitGame();
 	#endif
 

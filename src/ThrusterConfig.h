@@ -6,6 +6,7 @@ See LICENSE file at root of project for license
 #define G_IMPL_SDL2 0
 #define G_IMPL_OPENGL2 1
 #define G_IMPL_OPENGL3 2
+#define G_IMPL_PSP 3
 #define MODE_EDITOR 0
 #define MODE_GAME 1
 #define TYPE_RELEASE 0
@@ -19,7 +20,7 @@ See LICENSE file at root of project for license
 
 // DEPRECIATE SDL2 RENDERER SOON
 
-//#define GRAPHICS_IMPLEMENTATION G_IMPL_OPENGL3
+#define GRAPHICS_IMPLEMENTATION G_IMPL_SDL2
 
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_SDL2
 #define PLATFORM_NO_FRAMEBUFFER

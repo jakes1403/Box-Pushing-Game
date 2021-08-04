@@ -15,12 +15,15 @@ ThrusterWindowing.cpp - This is where the windowing system is handled. Can be us
 #include <iostream>
 
 #ifndef EMSCRIPTEN
+#ifndef __PSP__
 #include "TMessageBox.hpp"
+#endif
 #endif
 
 #ifdef __PSP__
 #include <pspdisplay.h>
 #include <pspctrl.h>
+#include <SDL2/SDL_image.h>
 #endif
 
 
@@ -89,7 +92,9 @@ int TWin_Init(int ScreenFPS, int ScreenWidth, int ScreenHeight, bool EnableAudio
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 	{
 #ifndef EMSCRIPTEN
+#ifndef __PSP__
 		ThrusterNativeDialogs::showMessageBox("SDL video could not be initialized!", "Initialization Error", ThrusterNativeDialogs::Style::Error);
+#endif
 #endif
 		return TWin_Fail;
 	}
@@ -98,24 +103,32 @@ int TWin_Init(int ScreenFPS, int ScreenWidth, int ScreenHeight, bool EnableAudio
 		if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
 		{
 #ifndef EMSCRIPTEN
+#ifndef __PSP__
 			ThrusterNativeDialogs::showMessageBox("SDL audio could not be initialized!", "Initialization Error", ThrusterNativeDialogs::Style::Error);
+#endif
 #endif
 			return TWin_Fail;
 		}
+#ifndef __PSP__
 		if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0)
 		{
 #ifndef EMSCRIPTEN
+#ifndef __PSP__
 			ThrusterNativeDialogs::showMessageBox("SDL mixer could not be initialized!", "Initialization Error", ThrusterNativeDialogs::Style::Error);
+#endif
 #endif
 			return TWin_Fail;
 		}
+#endif
 	}
 	if (EnableJoyStick)
 	{
 		if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) < 0)
 		{
 #ifndef EMSCRIPTEN
+#ifndef __PSP__
 			ThrusterNativeDialogs::showMessageBox("SDL joystick could not be initialized!", "Initialization Error", ThrusterNativeDialogs::Style::Error);
+#endif
 #endif
 			return TWin_Fail;
 		}
@@ -133,6 +146,11 @@ int TWin_Init(int ScreenFPS, int ScreenWidth, int ScreenHeight, bool EnableAudio
 			}
 		}
 	}
+
+	#ifdef __PSP__
+	int flags = IMG_INIT_JPG | IMG_INIT_PNG;
+	int initted = IMG_Init(flags);
+	#endif
 
 	if (linearFiltering)
 	{
@@ -157,13 +175,16 @@ int TWin_Init(int ScreenFPS, int ScreenWidth, int ScreenHeight, bool EnableAudio
 // TODO: Fix error handling with new libs
 int TWin_CreateWindow(const char* WindowName)
 {
+#ifndef __PSP__
 #ifndef EMSCRIPTEN
+#ifndef __PSP__
 	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+#endif
 #endif
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 	TWin_Window = SDL_CreateWindow(WindowName, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, TWin_ScreenWidth, TWin_ScreenHeight, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL);
@@ -173,15 +194,19 @@ int TWin_CreateWindow(const char* WindowName)
 	if (TWin_Window == NULL)
 	{
 #ifndef EMSCRIPTEN
+#ifndef __PSP__
 		ThrusterNativeDialogs::showMessageBox("SDL window could not be created!", "Initialization Error", ThrusterNativeDialogs::Style::Error);
+#endif
 #endif
 		return TWin_Fail;
 	}
 
 #ifndef EMSCRIPTEN
+#ifndef __PSP__
 	// Fix later
 	SDL_SetWindowResizable(TWin_Window, SDL_TRUE);
 	SDL_SetWindowMinimumSize(TWin_Window, TWin_ScreenWidth / 4, TWin_ScreenHeight / 4);
+#endif
 #endif
 
 	#ifdef __PSP__
@@ -235,6 +260,7 @@ int TWin_CreateWindow(const char* WindowName)
 	ImGui_ImplOpenGL3_Init(glsl_version);
 #endif
 	#endif
+#endif
 
 	//lineBuffer = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, TWin_ScreenWidth, TWin_ScreenHeight);
 	return 0;
@@ -242,6 +268,7 @@ int TWin_CreateWindow(const char* WindowName)
 
 int TWin_BeginFrame(int frame)
 {
+#ifndef __PSP__
 	LAST = NOW;
 	NOW = SDL_GetPerformanceCounter();
 
@@ -398,7 +425,7 @@ int TWin_BeginFrame(int frame)
             io.DisplayFramebufferScale = ImVec2((float)display_w / w, (float)display_h / h);
 		#endif
     }
-
+#endif
 	#ifdef __PSP__
 	sceCtrlPeekBufferPositive(&pad, 1);
 
@@ -418,6 +445,8 @@ int TWin_BeginFrame(int frame)
 
 	#endif
 
+#ifndef __PSP__
+
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 
 	SDL_RenderClear(renderer);
@@ -436,11 +465,14 @@ int TWin_BeginFrame(int frame)
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 #endif
 
+#endif
+
 	return TWin_Good;
 }
 
 int TWin_EndFrame()
 {
+#ifndef __PSP__
 	#if COMPILE_WITH_IMGUI
 	ImGui::Render();
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
@@ -491,6 +523,7 @@ int TWin_EndFrame()
 		}
 	}
 	#endif
+#endif
 	return TWin_Good;
 }
 
@@ -517,7 +550,9 @@ int TWin_DestroyWindow()
 	//Destroy window
 	SDL_DestroyWindow(TWin_Window);
 
+#ifndef __PSP__
 	Mix_Quit();
+#endif
 	SDL_Quit();
 
 	return 0;

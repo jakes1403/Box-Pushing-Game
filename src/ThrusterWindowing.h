@@ -8,7 +8,9 @@ See LICENSE file at root of project for license
 #include "ThrusterConfig.h"
 
 #include <SDL2/SDL.h>
+#ifndef __PSP__
 #include <SDL2/SDL_mixer.h>
+#endif
 
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_OPENGL3
 #include "glad/glad.h"

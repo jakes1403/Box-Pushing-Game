@@ -10,6 +10,10 @@
 #include "_vectorize.hpp"
 #include <limits>
 
+#ifdef __PSP__
+#undef GLM_HAS_CXX11_STL
+#endif
+
 namespace glm
 {
 	// min

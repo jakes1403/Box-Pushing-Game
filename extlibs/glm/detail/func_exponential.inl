@@ -7,6 +7,10 @@
 #include <cmath>
 #include <cassert>
 
+#ifdef __PSP__
+#undef GLM_HAS_CXX11_STL
+#endif
+
 namespace glm{
 namespace detail
 {
