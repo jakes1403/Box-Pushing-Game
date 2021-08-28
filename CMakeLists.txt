@@ -131,15 +131,16 @@ elseif(WIN32)
 endif()
 
 if (RENDERER_SDL2)
-    target_compile_definitions(${TARGET_NAME} PUBLIC GRAPHICS_IMPLEMENTATION=0)
-elseif (RENDERER_OPENGL3)
-    target_compile_definitions(${TARGET_NAME} PUBLIC GRAPHICS_IMPLEMENTATION=2)
+    target_compile_definitions(${TARGET_NAME} PUBLIC BUILD_GAME_SDL2)
+endif()
+if (RENDERER_OPENGL3)
+    target_compile_definitions(${TARGET_NAME} PUBLIC BUILD_GAME_OPENGL3)
 endif()
 
 if (RELEASE_MODE)
-    target_compile_definitions(${TARGET_NAME} PUBLIC TBUILD_TYPE=0)
+    target_compile_definitions(${TARGET_NAME} PUBLIC BUILD_GAME_RELEASE)
 else()
-    target_compile_definitions(${TARGET_NAME} PUBLIC TBUILD_TYPE=1)
+    target_compile_definitions(${TARGET_NAME} PUBLIC BUILD_GAME_DEBUG)
 endif()
 
 target_link_libraries(${TARGET_NAME}

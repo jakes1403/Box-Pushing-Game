@@ -1,0 +1,52 @@
+﻿{
+  "configurations": [
+    {
+      "name": "x64-Debug (default)",
+      "generator": "Ninja",
+      "configurationType": "Debug",
+      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "buildRoot": "${projectDir}\\out\\build\\${name}",
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "SDL2_INCLUDE_DIR",
+          "value": "D:\\NewSoftwareProjects\\Libraries\\SDL2\\include",
+          "type": "PATH"
+        },
+        {
+          "name": "SDL2_LIBRARY",
+          "value": "D:\\NewSoftwareProjects\\Libraries\\SDL2\\lib\\x64\\SDL2.lib",
+          "type": "FILEPATH"
+        },
+        {
+          "name": "SDL2MAIN_LIBRARY",
+          "value": "D:\\NewSoftwareProjects\\Libraries\\SDL2\\lib\\x64\\SDL2main.lib",
+          "type": "FILEPATH"
+        },
+        {
+          "name": "SDL2_MIXER_LIBRARY",
+          "value": "D:\\NewSoftwareProjects\\Libraries\\SDL2\\lib\\x64\\SDL2_mixer.lib",
+          "type": "FILEPATH"
+        },
+        {
+          "name": "SDL2_MIXER_INCLUDE_DIR",
+          "value": "D:\\NewSoftwareProjects\\Libraries\\SDL2\\include",
+          "type": "PATH"
+        },
+        {
+          "name": "RENDERER_SDL2",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "RENDERER_OPENGL3",
+          "value": "False",
+          "type": "BOOL"
+        }
+      ]
+    }
+  ]
+}

@@ -48,8 +48,10 @@ const int ScreenWidth = 480;
 const int ScreenHeight = 272;
 const char* GameName = "Box Pushing Game";
 
+// Create scene manager for the game
 TSceneManager GameSceneManager;
 
+// All the lights
 TLight2D whiteLight1;
 TLight2D redLight1;
 TLight2D greenLight1;
@@ -61,51 +63,64 @@ TLight2D uiLight1;
 TLight2D uiLight2;
 TLight2D uiLight3;
 
+// Ticking down sounds (right now some annoying cowbell noises)
 TSound tickDownLow;
 TSound themeMusic;
 
+// Shader for the framebuffer
 TShader frameBuffShader;
 
+// Probably not needed anymore, I forgot tbh
 shared_ptr<TGameObject> gameSceneRoot;
 
-#if THRUSTER_MODE == MODE_EDITOR && COMPILE_WITH_IMGUI
-SDL_Texture* target;
-#endif
-
+// Current frame, updated every tick
 int gameCurrentFrame;
 
+// This is where we can pull all the user's inputs from
 InputQuery inputQuery;
 
+// A vector containing the joystick movement
 vec2 joyAxis;
 
+// Holds all the managed state for the game. Basically to swap between menu and gameplay mode, etc
 TStateManager GameStateManager;
 
+// Leftover from 2019
 bool showDebugInfo = false;
 
+// Some dumb function to make stuff sorta readable
 inline bool isNumNegative(tfloat num)
 {
 	return num < 0;
 }
 
+// Current score, displayed on screen
 int Score;
 
+// The timer that ticks down
 int Timer;
 
+// How much to increment score by
 int baseScoreInc;
 
+// A lazy enum of the directions the player faces. I had no idea what enums are at the time
 #define facingUP 0
 #define facingDOWN 1
 #define facingLEFT 2
 #define facingRIGHT 3
 
+// Dont use TVec2D.
 TVec2D mousePos;
 
+// Texture with the player
 TTexture guyTex;
 
 class Player {
 public:
+	// This is called when loading the player
 	void Load()
 	{	
+		// Get all his stuff loaded up
 		guyTex.loadImage("char.png");
 		stepSoundLeftFoot.load("step.wav");
 		stepSoundRightFoot.load("step2.wav");
@@ -113,6 +128,7 @@ public:
 	}
 	void Create()
 	{
+		// Create his sprite and set up his parameters
 		TSprite guySprite;
 		guySprite.create(guyTex, { 0, 0 });
 		guySprite.isAnimated = true;
@@ -121,25 +137,35 @@ public:
 		guySprite.worldSize.w = 50;
 		guySprite.worldSize.h = 51;
 
+		// Create his physics object
 		guyObject.createFromSprite(guySprite);
 
+		// Collision stuff
 		guyObject.setHitBoxToPoly(characterHitBoxList);
 		guyObject.enablePhysics({ 0, 0 }, false, 2, 0, true);
+		// TODO: rename those hex numbers to readable labels
 		cpShapeSetFilter(guyObject.physShape, cpShapeFilterNew(CP_NO_GROUP, 0x00010, 0x00011));
 		cpShapeSetCollisionType(guyObject.physShape, WORLD_COLTYPE);
 	}
+	// Update func
+	// Todo: Make sure inputs cannot be combined (e.g. if buttons and joypads pressed at same time wont multiply speeds)
 	void Update()
 	{
+		// Take the player velocity so we can apply animations based on that
 		cpVect velocity = cpBodyGetVelocity(guyObject.physBody);
 		tfloat avgVelocity = fabs((velocity.x + velocity.y) / 2);
+		// If the velocity is bigger than 15, he is running, so it remains and the rest of the func continues, else we flip it false
 		if (isRunning && avgVelocity < 15)
 		{
 			isRunning = false;
 		}
 		if (isRunning)
 		{
+			// Set the frame based on the time and some arbitrary number I pulled out of nowhere
 			setFrame((int)(((SDL_GetTicks() / 16.6666f) / 5)) % 3);
 			
+			// I tried doing footsteps but they annoyed the hell out of me
+			// TODO: Make footsteps
 			if (stepTimerLeftFoot.IsExpired())
 			{
 				//stepSoundLeftFoot.play();
@@ -153,27 +179,38 @@ public:
 		}
 		else
 		{
+			// Standing frame.
 			setFrame(3);
 		}
 
-		tfloat joyStickCutoff = 0.2f;
+		// Stop using tfloat jesus
+		tfloat joyStickCutoff = 0.2f; // This dictates when to ignore joystick input (e.g. if it were in resting position)
 
+		// If outside of cutoff
 		if (fabs(joyAxis.x) > joyStickCutoff || fabs(joyAxis.y) > joyStickCutoff)
 		{
+			// Now we let the player move
 			moveInDirection({ joyAxis.x * moveSpeed, joyAxis.y * moveSpeed });
 		}
-		else if (inputQuery.pointerDown)
+		else if (inputQuery.pointerDown) // If using mouse movement
 		{
+			// Make the player move in the direction of the mouse.
+			// We take the position of the mouse relative to the player, and normalize it then move the player that way.
+
+			// Always gotta convert to world cords
 			vec2 mouse = ConvertNativeToWorldCords(vec2(inputQuery.pointerX, inputQuery.pointerY));
+
 			vec2 distance = vec2(mouse.x - guyObject.transform.x, mouse.y - guyObject.transform.y);
 			if (fabs(glm::distance(vec2(0.0f), distance)) > 20.0f)
 			{
 				vec2 directionMove = normalize(distance);
+				// Move in normalized direction
 				moveInDirection(directionMove * moveSpeed);
 			}
 		}
 		else
 		{
+			// Basic WASD/UpDownLeftRight movement
 			if (inputQuery.buttons[BUTTON_UP])
 			{
 				moveUp();
@@ -192,33 +229,43 @@ public:
 			}
 		}
 
+		// Update the guys object
 		guyObject.update();
 	}
-	void moveLeft()
+	
+	// All these are just to make directional movement with keys more readable
+	inline void moveLeft()
 	{
 		moveInDirection({ moveSpeed * -1, 0 });
 	}
-	void moveRight()
+	inline void moveRight()
 	{
 		moveInDirection({ moveSpeed, 0 });
 	}
-	void moveUp()
+	inline void moveUp()
 	{
 		moveInDirection({ 0, moveSpeed });
 	}
-	void moveDown()
+	inline void moveDown()
 	{
 		moveInDirection({ 0, moveSpeed * -1 });
 	}
+	// When we want the player to move in a direction and actually have animations
+	// The vector isnt a directional vector btw, bc it includes speed as well
 	void moveInDirection(vec2 moveDirection)
 	{
+		// This is the minimum move speed we will allows
 		tfloat minMoveSpeed = moveSpeed / 2;
 		isRunning = true;
 		tfloat absMoveX = fabs(moveDirection.x);
 		tfloat absMoveY = fabs(moveDirection.y);
 
+		// So here we are gonna actually determine where the player is looking.
+		// It converts that vec2 of the players direction into the 1 of 4 different looking direction animations he has
+
 		lookingDirection = moveDirection;
 
+		// Branch to get the guys directions
 		if (absMoveX > absMoveY)
 		{
 			if (absMoveX >= minMoveSpeed)
@@ -248,12 +295,17 @@ public:
 			}
 		}
 		updateLookingDirection();
+		// Apply the physics movement.
+		// He is just a regular object so there are no special tricks I have to do to get him to collide properly with the world
 		cpBodyApplyForceAtLocalPoint(guyObject.physBody, cpv(moveDirection.x, moveDirection.y), cpv(0,0));
 	}
+	// Direction the player is moving, used internally for animations
 	int direction = facingRIGHT;
 	
+	// Move speed that the stuff is usually multiplied by
 	tfloat moveSpeed = 5000;
 
+	// Since the spritesheet is just the same 3 frames with 4 different looking directions (3 * 4) we just offset the frame by the looking direction
 	void setFrame(int frameNum)
 	{
 		if (direction == facingUP)
@@ -271,6 +323,7 @@ public:
 		currentFrame = frameNum;
 	}
 
+	// Graphically update the movement
 	void updateLookingDirection()
 	{
 		if (direction == facingLEFT)
@@ -283,6 +336,7 @@ public:
 		}
 		setFrame(currentFrame);
 	}
+	// Why
 	TVec2D getTransform()
 	{
 		return guyObject.sprite.transform;
@@ -294,27 +348,34 @@ public:
 	vec2 lookingDirection = { 0, 0 };
 	bool isRunning;
 private:
+	// Sounds for feet.
 	TSound stepSoundLeftFoot;
 	TSound stepSoundRightFoot;
+	// Timers for when to play sounds
 	TTimer stepTimerLeftFoot;
 	TTimer stepTimerRightFoot;
+	// The hitbox for the player, this is what gets sent to the physics engine.
 	TVertexList characterHitBoxList = { {-19.524090, -17.250737}, {-15.244838, -25.541790}, {-4.546706, -25.274336}, {1.069813, -19.390364}, {6.151426, -25.006883}, {16.314651, -24.739430}, {20.593904, -22.064897}, {19.791544, -17.250737}, {14.977384, -11.901672}, {12.837758, -7.889872}, {19.256637, -4.680433}, {23.268437, 2.273353}, {23.000983, 14.308751}, {13.640118, 22.599803}, {0.000000, 25.006883}, {-14.442478, 23.134710}, {-22.466077, 15.646018}, {-24.605703, 4.947886}, {-21.396264, -4.145526}, {-15.512291, -8.157325}, {-11.233038, -9.227139}, {-14.709931, -12.169125} };
 	TObject guyObject;
 	int currentFrame = 1;
 };
 
+// This stupid function took me a while to get right. Checks if a vector is within the bounds of a rectangle
 inline bool isInBounds(TVec2D place, TVec2D bounds)
 {
 	return place.x > bounds.x && place.y < bounds.y && place.x < bounds.w && place.y > bounds.h;
 }
 
+// Position to place the check
 TVec2D checkPos;
+// Do I use a check or an X. Check=true X=false
 bool useCheck = false;
 
 bool wasOnCheck = false;
 
 bool isCheck;
 
+// Place a check here
 void checkAt(TVec2D pos)
 {
 	isCheck = true;
@@ -323,6 +384,7 @@ void checkAt(TVec2D pos)
 	wasOnCheck = false;
 	checkPos = pos;
 }
+// Place an X here
 void xAt(TVec2D pos)
 {
 	isCheck = false;
@@ -332,6 +394,7 @@ void xAt(TVec2D pos)
 	checkPos = pos;
 }
 
+// Another lazy enum for colors. Of course I couldnt take the 5 seconds to read a wikipedia page on enums.
 #define Orange 0
 #define Green 1
 #define Red 2
@@ -351,6 +414,7 @@ void xAt(TVec2D pos)
 
 #define NumColors 12
 
+// Get the RGB color data based on our tint "enum"
 vec3 ColorToTint(int color)
 {
 	switch (color)
@@ -381,6 +445,8 @@ vec3 ColorToTint(int color)
 		return vec3(0.95, 0.6333, 0);
 	}
 }
+
+// There was a testing level I made years ago. Keeping it here just in case
 
 //class Level1 {
 //public:
@@ -464,17 +530,22 @@ class Level2 {
 public:
 	void Load()
 	{
+		// Yeah there entire level is just a massive png
 		levelTex.loadImage("level.png");
 	}
 	void Create()
 	{
+		// Just a regular non physic sprite
 		levelSprite.create(levelTex, { 0, 0 });
 
+		// Set the world size so I can scale the pngs how I want
 		levelSprite.worldSize.w = 1076;
 		levelSprite.worldSize.h = 408;
 
+		// Elasticity of the colliders
 		tfloat elast = 0.9f;
 
+		// Iterate over the list of wall hitboxes for the level
 		for (auto hitbox : hitBoxList)
 		{
 			TObject wallPhys;
@@ -488,6 +559,7 @@ public:
 			hitBoxObjects.push_back(wallPhys);
 		}
 
+		// Iterate over the list of boundary hitboxes for the level
 		for (auto hitbox : boundsHitboxList)
 		{
 			TObject wallPhys;
@@ -502,16 +574,22 @@ public:
 	}
 	void Update()
 	{
+		// Draw the level
 		levelSprite.draw();
 	}
 private:
 
+	// Texture data for the level
 	TTexture levelTex;
 
+	// Sprite data
 	TSprite levelSprite;
 
+	// All the objects for the hitboxes
 	vector<TObject> hitBoxObjects;
 
+	// I copied and pasted this from my internal tools.
+	// Lots of magic numbers
 	vector<TVertexList> hitBoxList = {
 		{ {541.577026, 42.578571}, {459.221436, 43.837830}, {378.880707, 123.171158}, {377.191742, 140.288513}, {372.406555, 204.258881}, {450.480621, 204.258881}, {524.273193, 203.251480}, {537.873230, 203.251480}, {538.125061, 144.569992}, {540.391724, 50.881104} },
 		{ {15.488148, 203.558594}, {16.290508, 142.311798}, {14.685787, 76.250824}, {14.700546, 55.731247}, {25.933584, 36.474609}, {118.472427, 29.788275}, {231.204056, 115.357101}, {234.680954, 130.334473}, {238.881439, 204.346191}, {84.471138, 203.846710} },
@@ -535,8 +613,10 @@ private:
 	};
 };
 
+// The texture for the box :D
 TTexture boxTexture;
 
+// Tint
 void tint(TTexture& input, Uint8 r, Uint8 g, Uint8 b)
 {
 #if GRAPHICS_IMPLEMENTATION == G_IMPL_SDL2
@@ -548,6 +628,7 @@ void tint(TTexture& input, Uint8 r, Uint8 g, Uint8 b)
 #endif
 }
 
+// If we know the player got it right
 void correctBox(int color, TVec2D indicatorPos)
 {
 	checkAt(indicatorPos);
@@ -555,6 +636,8 @@ void correctBox(int color, TVec2D indicatorPos)
 	LI_RunFunction("RightBox");
 }
 
+// If we know the idiot player got it wrong.
+// Punish them!
 void wrongBox(int color, TVec2D indicatorPos)
 {
 	xAt(indicatorPos);
@@ -562,6 +645,7 @@ void wrongBox(int color, TVec2D indicatorPos)
 	LI_RunFunction("WrongBox");
 }
 
+// Lazy SDL2 loading
 vector<TTexture> boxTextures;
 TTexture LoadBox(int color)
 {
