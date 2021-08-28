@@ -1,3 +1,33 @@
 <img src="resource/logo.png" width="827" height="372"/>
 The source code to the gameplay and engine behind Box Pushing Game.
-*Copyright 2019-2021 Jacob Allen*
+
+# About
+Box Pushing Game was a project I took on the side to learn C++ and how to make game engines. As a side effect the code is really bad. Feel free to do something about it :D
+
+Most of this code is years old and there are private versions of this repo with way better code, I just havent gone around to putting them out and documenting them yet.
+
+It is a game with a very straightforward title where you push boxes into holes. Nothing more to it than that. Its got decent art, shader effects, and custom lighting. I haven't gotten around to music but then again this is a very old project.
+
+| Screenshots |
+|:--:| 
+| ![SixkQb](https://user-images.githubusercontent.com/45643741/131200536-caf8ca1b-dded-46da-affa-7da7581f0288.png) |
+| ![MQN6ca](https://user-images.githubusercontent.com/45643741/131200522-4cc65c6c-67a6-4aec-aff4-5e56177fc8b0.png) |
+
+## Supported Platforms
+* Microsoft Windows 64 bit
+* Linux (not buildable yet but soon)
+* Sony PSP (Yes, the one from *2005*. Only works in an emulator currently)
+* HTML5 (Runs with emscripten)
+
+# About the "Engine"
+Thruster (the name for the driver code of the game) is a library I created to make the creation of this game easier.
+
+It works more as a software framework instead of an engine, and enables cross platform support easily
+
+I wrote almost all of that code myself, and I was very new to C++ at the time so I am sure its trash.
+
+# Compiling
+
+Todo
+
+*Copyright (C) 2019-2021 Jacob Allen*
