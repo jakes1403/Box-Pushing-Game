@@ -23,7 +23,8 @@ endif()
 include_directories("${CMAKE_SOURCE_DIR}/extlibs/chipmunk/include")
 
 set(BUILD_STATIC_LIBS TRUE)
-add_subdirectory("${CMAKE_SOURCE_DIR}/extlibs/glm")
+include_directories("${CMAKE_SOURCE_DIR}/extlibs/glm")
+add_subdirectory("${CMAKE_SOURCE_DIR}/extlibs/glm/glm")
 
 if (RENDERER_OPENGL3)
     find_package(OpenGL REQUIRED)
