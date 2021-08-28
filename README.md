@@ -1,4 +1,5 @@
 <img src="resource/logo.png" width="827" height="372"/>
+
 The source code to the gameplay and engine behind Box Pushing Game.
 
 # About
@@ -28,6 +29,36 @@ I wrote almost all of that code myself, and I was very new to C++ at the time so
 
 # Compiling
 
-Todo
+Make sure CMake, SDL2, and SDl2-mixer are installed
+If using the OpenGL build, make sure your system is capable of running OpenGL
+
+```
+git clone https://github.com/jakes1403/Box-Pushing-Game.git
+```
+
+```
+git submodule update --init --recursive
+```
+
+```
+mkdir build
+cd build
+```
+
+If you are building on windows:
+
+```
+cmake -DSDL2MAIN_LIBRARY="PATH_TO_SDL2main.lib_HERE" -DSDL2_LIBRARY="PATH_TO_SDL2.lib_HERE" -DSDL2_INCLUDE_DIR="PATH_TO_SDL2_HEADERS_HERE" -DSDL2_MIXER_LIBRARY="PATH_TO_SDL2_mixer.lib_HERE" -DSDL2_MIXER_INCLUDE_DIR="PATH_TO_SDL2_MIXER_HEADERS_HERE" ..
+```
+
+Otherwise:
+
+```
+cmake ..
+```
+
+```
+cmake --build . --config Release
+```
 
 *Copyright (C) 2019-2021 Jacob Allen*
