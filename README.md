@@ -27,35 +27,73 @@ It works more as a software framework instead of an engine, and enables cross pl
 
 I wrote almost all of that code myself, and I was very new to C++ at the time so I am sure its trash.
 
-# Compiling
+# Building
 
-Make sure CMake, SDL2, and SDl2-mixer are installed
-If using the OpenGL build, make sure your system is capable of running OpenGL
+Make sure CMake, SDL2, and SDl2-mixer are installed.
+
+If using the OpenGL build, make sure your system is capable of running OpenGL.
+
+## Windows
+
+Clone the repo
 
 ```
 git clone https://github.com/jakes1403/Box-Pushing-Game.git
 ```
 
+Initialize and pull the dependencies
+
 ```
 git submodule update --init --recursive
 ```
+
+Make the build directory
 
 ```
 mkdir build
 cd build
 ```
 
-If you are building on windows:
+Set up the build files
 
 ```
 cmake -DSDL2MAIN_LIBRARY="PATH_TO_SDL2main.lib_HERE" -DSDL2_LIBRARY="PATH_TO_SDL2.lib_HERE" -DSDL2_INCLUDE_DIR="PATH_TO_SDL2_HEADERS_HERE" -DSDL2_MIXER_LIBRARY="PATH_TO_SDL2_mixer.lib_HERE" -DSDL2_MIXER_INCLUDE_DIR="PATH_TO_SDL2_MIXER_HEADERS_HERE" ..
 ```
 
-Otherwise:
+Build the game
+
+```
+cmake --build . --config Release
+```
+
+## Linux
+
+Clone the repo
+
+```
+git clone https://github.com/jakes1403/Box-Pushing-Game.git
+```
+
+Initialize and pull the dependencies
+
+```
+git submodule update --init --recursive
+```
+
+Make the build directory
+
+```
+mkdir build
+cd build
+```
+
+Set up the build files
 
 ```
 cmake ..
 ```
+
+Build the game
 
 ```
 cmake --build . --config Release
