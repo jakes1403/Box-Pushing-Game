@@ -39,6 +39,7 @@ Clone the repo
 
 ```
 git clone https://github.com/jakes1403/Box-Pushing-Game.git
+cd Box-Pushing-Game
 ```
 
 Initialize and pull the dependencies
@@ -72,6 +73,7 @@ Clone the repo
 
 ```
 git clone https://github.com/jakes1403/Box-Pushing-Game.git
+cd Box-Pushing-Game
 ```
 
 Initialize and pull the dependencies
