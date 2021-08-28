@@ -1,0 +1,3 @@
+[submodule "extlibs/chipmunk"]
+	path = extlibs/chipmunk
+	url = https://github.com/slembcke/Chipmunk2D.git
