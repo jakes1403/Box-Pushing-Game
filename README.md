@@ -2,6 +2,10 @@
 
 The source code to the gameplay and engine behind Box Pushing Game.
 
+This game is published at https://jakes1403.itch.io/boxpushinggame
+
+Donate there to support the game!
+
 # About
 Box Pushing Game was a project I took on the side to learn C++ and how to make game engines. As a side effect the code is really bad. Feel free to do something about it :D
 
@@ -99,6 +103,24 @@ Build the game
 
 ```
 cmake --build . --config Release
+```
+
+# Running
+
+In order to run the game, obtain a copy of the game assets. You can get them by downloading a release of the game at itch.io for an optional donation
+
+You should have a file named assets.tpak
+
+Place this file in the same directory as your BoxPushingGame executable and run it!
+
+If the game throws an error about missing DLLs, make sure you have copied your SDL2.dll, SDL2_mixer.dll, and chipmunk.dll files from your build/library directories
+
+Your binary directory should look like this:
+
+```
+assets.tpak
+<game executable>
+<DLLs if on windows>
 ```
 
 *Copyright (C) 2019-2021 Jacob Allen*
