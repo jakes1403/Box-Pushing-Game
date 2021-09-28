@@ -7,7 +7,7 @@ This game is published at https://jakes1403.itch.io/boxpushinggame
 Donate there to support the game!
 
 # About
-Box Pushing Game was a project I took on the side to learn C++ and how to make game engines. As a side effect the code is really bad. Feel free to do something about it :D
+Box Pushing Game was a project I took on the side to learn C++ and how to make game engines.
 
 Most of this code is years old and there are private versions of this repo with way better code, I just havent gone around to putting them out and documenting them yet.
 
@@ -21,15 +21,13 @@ It is a game with a very straightforward title where you push boxes into holes. 
 ## Supported Platforms
 * Microsoft Windows 64 bit
 * Linux (not buildable yet but soon)
-* Sony PSP (Yes, the one from *2005*. Only works in an emulator currently)
+* Sony PSP (The one from *2005*. Only works in an emulator currently)
 * HTML5 (Runs with emscripten)
 
 # About the "Engine"
 Thruster (the name for the driver code of the game) is a library I created to make the creation of this game easier.
 
 It works more as a software framework instead of an engine, and enables cross platform support easily
-
-I wrote almost all of that code myself, and I was very new to C++ at the time so I am sure its trash.
 
 # Building
 
